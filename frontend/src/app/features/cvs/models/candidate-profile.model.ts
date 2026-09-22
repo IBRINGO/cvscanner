@@ -9,8 +9,39 @@ export interface Experience {
   description: string | null;
   achievements: string[];
   technologies: string[];
+  seniority: SeniorityLevel | null;
   evidence: Evidence | null;
 }
+
+export type SeniorityLevel =
+  | 'INTERN'
+  | 'JUNIOR'
+  | 'MID'
+  | 'SENIOR'
+  | 'LEAD'
+  | 'MANAGER'
+  | 'DIRECTOR'
+  | 'EXECUTIVE'
+  | 'UNKNOWN';
+
+export type EducationLevel =
+  | 'HIGH_SCHOOL'
+  | 'ASSOCIATE'
+  | 'BACHELOR'
+  | 'MASTER'
+  | 'DOCTORATE'
+  | 'PROFESSIONAL_CERTIFICATE'
+  | 'UNKNOWN';
+
+export type LanguageProficiency =
+  | 'BEGINNER'
+  | 'ELEMENTARY'
+  | 'INTERMEDIATE'
+  | 'UPPER_INTERMEDIATE'
+  | 'ADVANCED'
+  | 'FLUENT'
+  | 'NATIVE'
+  | 'UNKNOWN';
 
 export interface Education {
   institution: string | null;
@@ -18,6 +49,7 @@ export interface Education {
   field_of_study: string | null;
   start_date_raw: string | null;
   end_date_raw: string | null;
+  degree_level: EducationLevel | null;
   evidence: Evidence | null;
 }
 
@@ -37,6 +69,8 @@ export interface Certification {
 export interface Language {
   name: string;
   proficiency: string | null;
+  canonical_name: string | null;
+  proficiency_normalized: LanguageProficiency | null;
 }
 
 export interface CandidateSkill {

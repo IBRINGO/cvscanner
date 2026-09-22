@@ -1,19 +1,15 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { EntityTagComponent } from '../../../../shared/components/ui/entity-tag/entity-tag.component';
 import { EvidenceNoteComponent } from '../../../../shared/components/ui/evidence-note/evidence-note.component';
 import { SkillChipComponent } from '../../../../shared/components/ui/skill-chip/skill-chip.component';
+import { formatEnumLabel } from '../../../../shared/utils/format-label';
 import { CandidateProfile, CandidateSkill } from '../../models/candidate-profile.model';
 
 interface SkillGroup {
   category: string;
   skills: CandidateSkill[];
-}
-
-function formatCategoryLabel(category: string): string {
-  return category
-    .toLowerCase()
-    .split('_')
-    .map((word) => (word === 'ai' || word === 'ml' ? word.toUpperCase() : word[0]?.toUpperCase() + word.slice(1)))
-    .join(' ');
 }
 
 /**
@@ -25,7 +21,8 @@ function formatCategoryLabel(category: string): string {
 @Component({
   selector: 'app-candidate-profile-view',
   standalone: true,
-  imports: [EvidenceNoteComponent, SkillChipComponent],
+  imports: [EvidenceNoteComponent, SkillChipComponent, EntityTagComponent, NgIcon],
+  viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article class="profile">
@@ -43,14 +40,14 @@ function formatCategoryLabel(category: string): string {
 
       @if (profile.summary) {
         <section class="profile__section">
-          <h2>Summary</h2>
+          <h2><ng-icon name="lucideFileText" size="18" />Summary</h2>
           <p>{{ profile.summary }}</p>
         </section>
       }
 
       @if (profile.experiences.length > 0) {
         <section class="profile__section">
-          <h2>Experience</h2>
+          <h2><ng-icon name="lucideBriefcase" size="18" />Experience</h2>
           <ul class="profile__timeline">
             @for (experience of profile.experiences; track $index) {
               <li class="profile__entry">
@@ -67,6 +64,9 @@ function formatCategoryLabel(category: string): string {
                     </span>
                   }
                 </div>
+                @if (experience.seniority && experience.seniority !== 'UNKNOWN') {
+                  <app-entity-tag [label]="formatEnumLabel(experience.seniority)" icon="lucideLayers" />
+                }
                 @if (experience.description) {
                   <p class="text-secondary">{{ experience.description }}</p>
                 }
@@ -95,7 +95,7 @@ function formatCategoryLabel(category: string): string {
 
       @if (profile.education.length > 0) {
         <section class="profile__section">
-          <h2>Education</h2>
+          <h2><ng-icon name="lucideGraduationCap" size="18" />Education</h2>
           <ul class="profile__timeline">
             @for (entry of profile.education; track $index) {
               <li class="profile__entry">
@@ -112,6 +112,9 @@ function formatCategoryLabel(category: string): string {
                     </span>
                   }
                 </div>
+                @if (entry.degree_level && entry.degree_level !== 'UNKNOWN') {
+                  <app-entity-tag [label]="formatEnumLabel(entry.degree_level)" icon="lucideGraduationCap" />
+                }
                 @if (entry.evidence) {
                   <app-evidence-note [evidence]="entry.evidence" />
                 }
@@ -123,11 +126,11 @@ function formatCategoryLabel(category: string): string {
 
       @if (profile.skills.length > 0) {
         <section class="profile__section">
-          <h2>Skills</h2>
+          <h2><ng-icon name="lucideCode" size="18" />Skills</h2>
           <div class="profile__skill-clusters">
             @for (group of skillGroups(); track group.category) {
               <div class="profile__skill-group">
-                <h3 class="profile__skill-category text-tertiary">{{ formatCategoryLabel(group.category) }}</h3>
+                <h3 class="profile__skill-category text-tertiary">{{ formatEnumLabel(group.category) }}</h3>
                 <div class="profile__skill-chips">
                   @for (mention of group.skills; track mention.raw_text) {
                     <app-skill-chip
@@ -145,7 +148,7 @@ function formatCategoryLabel(category: string): string {
 
       @if (profile.projects.length > 0) {
         <section class="profile__section">
-          <h2>Projects</h2>
+          <h2><ng-icon name="lucideFolder" size="18" />Projects</h2>
           <ul class="profile__timeline">
             @for (project of profile.projects; track project.name) {
               <li class="profile__entry">
@@ -168,7 +171,7 @@ function formatCategoryLabel(category: string): string {
 
       @if (profile.certifications.length > 0) {
         <section class="profile__section">
-          <h2>Certifications</h2>
+          <h2><ng-icon name="lucideAward" size="18" />Certifications</h2>
           <ul class="profile__timeline">
             @for (cert of profile.certifications; track cert.name) {
               <li class="profile__entry">
@@ -187,14 +190,19 @@ function formatCategoryLabel(category: string): string {
 
       @if (profile.languages.length > 0) {
         <section class="profile__section">
-          <h2>Languages</h2>
-          <p class="text-secondary">
-            @for (language of profile.languages; track language.name; let last = $last) {
-              {{ language.name }}@if (language.proficiency) {
-                <span class="text-tertiary"> ({{ language.proficiency }})</span>
-              }@if (!last) {, }
+          <h2><ng-icon name="lucideLanguages" size="18" />Languages</h2>
+          <div class="profile__language-list">
+            @for (language of profile.languages; track language.name) {
+              <div class="profile__language">
+                <span class="profile__entry-title">{{ language.canonical_name ?? language.name }}</span>
+                @if (language.proficiency_normalized && language.proficiency_normalized !== 'UNKNOWN') {
+                  <app-entity-tag [label]="formatEnumLabel(language.proficiency_normalized)" icon="lucideGlobe" />
+                } @else if (language.proficiency) {
+                  <span class="text-tertiary">({{ language.proficiency }})</span>
+                }
+              </div>
             }
-          </p>
+          </div>
         </section>
       }
     </article>
@@ -222,6 +230,19 @@ function formatCategoryLabel(category: string): string {
       }
       .profile__section h2 {
         margin-bottom: var(--space-3);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .profile__language-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .profile__language {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
       }
       .profile__timeline {
         list-style: none;
@@ -296,8 +317,8 @@ export class CandidateProfileViewComponent {
     return items;
   }
 
-  formatCategoryLabel(category: string): string {
-    return formatCategoryLabel(category);
+  formatEnumLabel(value: string | null | undefined): string {
+    return formatEnumLabel(value);
   }
 
   skillGroups(): SkillGroup[] {

@@ -28,6 +28,7 @@ describe('CandidateProfileViewComponent', () => {
         description: 'Did engineering work.',
         achievements: ['Shipped a thing'],
         technologies: ['Python'],
+        seniority: 'MID',
         evidence: {
           page_number: 1,
           section: 'EXPERIENCE',
@@ -40,7 +41,9 @@ describe('CandidateProfileViewComponent', () => {
     education: [],
     projects: [],
     certifications: [],
-    languages: [{ name: 'English', proficiency: 'Native' }],
+    languages: [
+      { name: 'English', proficiency: 'Native', canonical_name: 'English', proficiency_normalized: 'NATIVE' },
+    ],
     skills: [
       { raw_text: 'Python', skill: { canonical_name: 'Python', category: 'PROGRAMMING_LANGUAGE' }, evidence: null },
       { raw_text: 'SomeInternalTool', skill: null, evidence: null },

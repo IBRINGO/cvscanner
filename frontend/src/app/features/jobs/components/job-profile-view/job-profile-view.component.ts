@@ -1,5 +1,9 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { EntityTagComponent } from '../../../../shared/components/ui/entity-tag/entity-tag.component';
 import { EvidenceNoteComponent } from '../../../../shared/components/ui/evidence-note/evidence-note.component';
+import { formatEnumLabel } from '../../../../shared/utils/format-label';
 import { JobProfile, JobRequirement } from '../../models/job-profile.model';
 
 /**
@@ -11,22 +15,25 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
 @Component({
   selector: 'app-job-profile-view',
   standalone: true,
-  imports: [EvidenceNoteComponent],
+  imports: [EvidenceNoteComponent, EntityTagComponent, NgIcon],
+  viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article class="job-profile">
       <header class="job-profile__masthead">
         <h1>{{ profile.title ?? 'Untitled role' }}</h1>
-        <p class="text-secondary">
+        <p class="text-secondary job-profile__identity">
           @if (profile.company) {
-            <span>{{ profile.company }}</span>
+            <span><ng-icon name="lucideBuilding2" size="15" />{{ profile.company }}</span>
           }
           @if (profile.location) {
-            <span> | {{ profile.location }}</span>
+            <span><ng-icon name="lucideMapPin" size="15" />{{ profile.location }}</span>
           }
         </p>
         <p class="job-profile__tags">
-          @if (profile.seniority) {
+          @if (profile.seniority_normalized && profile.seniority_normalized !== 'UNKNOWN') {
+            <app-entity-tag [label]="formatEnumLabel(profile.seniority_normalized)" icon="lucideLayers" />
+          } @else if (profile.seniority) {
             <span class="job-profile__tag">{{ profile.seniority }}</span>
           }
           @if (profile.employment_type) {
@@ -37,14 +44,14 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
 
       @if (profile.summary) {
         <section class="job-profile__section">
-          <h2>Summary</h2>
+          <h2><ng-icon name="lucideFileText" size="18" />Summary</h2>
           <p>{{ profile.summary }}</p>
         </section>
       }
 
       @if (profile.responsibilities.length > 0) {
         <section class="job-profile__section">
-          <h2>Responsibilities</h2>
+          <h2><ng-icon name="lucideListChecks" size="18" />Responsibilities</h2>
           <ul class="job-profile__list">
             @for (item of profile.responsibilities; track item) {
               <li>{{ item }}</li>
@@ -55,13 +62,16 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
 
       @if (requiredRequirements().length > 0) {
         <section class="job-profile__section">
-          <h2>Required</h2>
+          <h2><ng-icon name="lucideTarget" size="18" />Required</h2>
           <ul class="job-profile__requirements">
             @for (requirement of requiredRequirements(); track $index) {
               <li>
                 <span class="job-profile__requirement job-profile__requirement--required">
                   {{ requirement.skill?.canonical_name ?? requirement.raw_text }}
                 </span>
+                @if (requirementDetail(requirement); as detail) {
+                  <span class="job-profile__requirement-detail text-tertiary font-mono">{{ detail }}</span>
+                }
                 @if (requirement.evidence) {
                   <app-evidence-note [evidence]="requirement.evidence" />
                 }
@@ -73,13 +83,16 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
 
       @if (preferredRequirements().length > 0) {
         <section class="job-profile__section">
-          <h2>Preferred</h2>
+          <h2><ng-icon name="lucideTarget" size="18" />Preferred</h2>
           <ul class="job-profile__requirements">
             @for (requirement of preferredRequirements(); track $index) {
               <li>
                 <span class="job-profile__requirement job-profile__requirement--preferred">
                   {{ requirement.skill?.canonical_name ?? requirement.raw_text }}
                 </span>
+                @if (requirementDetail(requirement); as detail) {
+                  <span class="job-profile__requirement-detail text-tertiary font-mono">{{ detail }}</span>
+                }
                 @if (requirement.evidence) {
                   <app-evidence-note [evidence]="requirement.evidence" />
                 }
@@ -105,6 +118,16 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
         flex-direction: column;
         gap: var(--space-2);
       }
+      .job-profile__identity {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-4);
+      }
+      .job-profile__identity span {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+      }
       .job-profile__tags {
         display: flex;
         gap: var(--space-2);
@@ -120,6 +143,9 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
       }
       .job-profile__section h2 {
         margin-bottom: var(--space-3);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
       }
       .job-profile__list {
         padding-left: var(--space-5);
@@ -151,6 +177,10 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
         border: 1px solid var(--border-strong);
         color: var(--ink-primary);
       }
+      .job-profile__requirement-detail {
+        margin-left: var(--space-2);
+        font-size: var(--text-xs);
+      }
     `,
   ],
 })
@@ -163,5 +193,20 @@ export class JobProfileViewComponent {
 
   preferredRequirements(): JobRequirement[] {
     return this.profile.requirements.filter((r) => r.importance === 'PREFERRED');
+  }
+
+  formatEnumLabel(value: string | null | undefined): string {
+    return formatEnumLabel(value);
+  }
+
+  /** A short, factual annotation for a requirement - never a match verdict. */
+  requirementDetail(requirement: JobRequirement): string | null {
+    if (requirement.requirement_type === 'EXPERIENCE' && requirement.minimum_years) {
+      return `${requirement.minimum_years}+ yrs`;
+    }
+    if (requirement.normalized_value) {
+      return formatEnumLabel(requirement.normalized_value);
+    }
+    return null;
   }
 }

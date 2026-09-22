@@ -19,8 +19,21 @@ export interface JobRequirement {
   importance: RequirementImportance;
   raw_text: string;
   skill: SkillRef | null;
+  minimum_years: number | null;
+  normalized_value: string | null;
   evidence: Evidence | null;
 }
+
+export type SeniorityLevel =
+  | 'INTERN'
+  | 'JUNIOR'
+  | 'MID'
+  | 'SENIOR'
+  | 'LEAD'
+  | 'MANAGER'
+  | 'DIRECTOR'
+  | 'EXECUTIVE'
+  | 'UNKNOWN';
 
 export interface JobProfile {
   title: string | null;
@@ -28,6 +41,7 @@ export interface JobProfile {
   location: string | null;
   employment_type: string | null;
   seniority: string | null;
+  seniority_normalized: SeniorityLevel | null;
   summary: string | null;
   responsibilities: string[];
   requirements: JobRequirement[];

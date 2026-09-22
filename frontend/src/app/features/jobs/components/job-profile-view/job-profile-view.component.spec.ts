@@ -11,6 +11,7 @@ describe('JobProfileViewComponent', () => {
     location: 'Remote',
     employment_type: 'Full-time',
     seniority: 'Senior',
+    seniority_normalized: 'SENIOR',
     summary: 'We are hiring.',
     responsibilities: ['Build APIs'],
     requirements: [
@@ -19,6 +20,8 @@ describe('JobProfileViewComponent', () => {
         importance: 'REQUIRED',
         raw_text: 'Python',
         skill: { canonical_name: 'Python', category: 'PROGRAMMING_LANGUAGE' },
+        minimum_years: null,
+        normalized_value: null,
         evidence: null,
       },
       {
@@ -26,6 +29,8 @@ describe('JobProfileViewComponent', () => {
         importance: 'PREFERRED',
         raw_text: 'Docker',
         skill: { canonical_name: 'Docker', category: 'DEVOPS' },
+        minimum_years: null,
+        normalized_value: null,
         evidence: null,
       },
     ],

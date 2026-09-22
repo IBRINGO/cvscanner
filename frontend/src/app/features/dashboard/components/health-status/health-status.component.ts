@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { CVSCANNER_ICONS } from '../../../../core/icons';
 import { HealthService } from '../../services/health.service';
 import { BackendStatus, HealthResponse } from '../../models/health.model';
 
@@ -10,18 +12,23 @@ import { BackendStatus, HealthResponse } from '../../models/health.model';
 @Component({
   selector: 'app-health-status',
   standalone: true,
+  imports: [NgIcon],
+  viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="health-status" [attr.data-status]="status()">
       @switch (status()) {
         @case ('loading') {
-          <span>Checking backend status…</span>
+          <ng-icon name="lucideLoaderCircle" class="spin" size="16" />
+          <span>Checking backend status...</span>
         }
         @case ('available') {
-          <span>✅ Backend available — {{ response()?.service }} v{{ response()?.version }}</span>
+          <ng-icon name="lucideCircleCheck" size="16" />
+          <span>Backend available - {{ response()?.service }} v{{ response()?.version }}</span>
         }
         @case ('unavailable') {
-          <span>⚠️ Backend unavailable. Is the Django server running?</span>
+          <ng-icon name="lucideTriangleAlert" size="16" />
+          <span>Backend unavailable. Is the Django server running?</span>
         }
       }
     </div>
@@ -29,18 +36,37 @@ import { BackendStatus, HealthResponse } from '../../models/health.model';
   styles: [
     `
       .health-status {
-        padding: 0.75rem 1rem;
-        border-radius: 6px;
-        border: 1px solid var(--color-border, #d0d5dd);
-        font-size: 0.9rem;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+        font-size: var(--text-sm);
+        color: var(--ink-secondary);
       }
       .health-status[data-status='available'] {
-        border-color: #12b76a;
-        background: #ecfdf3;
+        border-color: var(--status-processed);
+        background: var(--status-processed-tint);
+        color: var(--status-processed);
       }
       .health-status[data-status='unavailable'] {
-        border-color: #f04438;
-        background: #fef3f2;
+        border-color: var(--status-failed);
+        background: var(--status-failed-tint);
+        color: var(--status-failed);
+      }
+      .spin {
+        animation: health-status-spin 0.8s linear infinite;
+      }
+      @keyframes health-status-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .spin {
+          animation: none;
+        }
       }
     `,
   ],
