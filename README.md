@@ -7,10 +7,11 @@ requirements, produces an explainable score, and recommends improvements
 (including, eventually, a tailored CV with claims validated against
 evidence).
 
-**This repository is at Phase 1: Project Foundations.** The ATS
-Intelligence Engine itself (parsing, matching, scoring, recommendations,
-tailoring) is not implemented yet — see [Roadmap](#roadmap) and
-[Known limitations](#known-limitations).
+**This repository is at Phase 2: Document Intelligence.** CVs and job
+offers can be uploaded, parsed, and structured into evidence-backed
+profiles with normalized skills. Candidate-job matching, scoring,
+recommendations, and CV tailoring are not implemented yet - see
+[Roadmap](#roadmap) and [Known limitations](#known-limitations).
 
 ## Architecture
 
@@ -61,9 +62,11 @@ cvscanner/
 
 Angular 19 (not 20) was chosen because Angular CLI 20 requires Node
 `^20.19.0`, which is newer than the Node 20.16.0 available in this
-environment — see [ADR 0001](docs/adr/0001-modular-monolith-and-monorepo.md).
+environment - see [ADR 0001](docs/adr/0001-modular-monolith-and-monorepo.md).
 Django 5.2 (the current LTS release) was chosen over the newer, non-LTS
-6.1 line for stability.
+6.1 line for stability. Phase 2 adds `pdfplumber` (PDF text extraction)
+and `python-docx` (DOCX text extraction) - see
+[docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md).
 
 ## Local setup
 
@@ -88,14 +91,16 @@ Django 5.2 (the current LTS release) was chosen over the newer, non-LTS
    and `frontend` (:4200). The backend entrypoint runs migrations
    automatically before starting.
 
-3. Open the frontend at http://localhost:4200 — the dashboard page calls
+3. Open the frontend at http://localhost:4200 - the dashboard page calls
    `GET http://localhost:8000/api/v1/health/` and shows whether the
-   backend is reachable.
+   backend is reachable. From there, **CVs** and **Jobs** in the sidebar
+   let you upload a CV (PDF/DOCX) or a job offer (PDF/DOCX/pasted text)
+   and see it turn into a structured, evidence-backed profile.
 
 ### Running services individually (without Docker)
 
 Useful for fast iteration on just one side. Backend and worker need a
-Postgres/Redis reachable at `localhost` — either run `docker compose up
+Postgres/Redis reachable at `localhost` - either run `docker compose up
 postgres redis` first, or point `backend/.env` (see
 `backend/.env.example`) at your own instances.
 
@@ -132,7 +137,7 @@ but unused in Phase 1.
 
 ```bash
 make test            # both projects
-make test-backend    # pytest, SQLite in-memory — no services required
+make test-backend    # pytest, SQLite in-memory - no services required
 make test-frontend   # Karma/Jasmine, headless Chrome required
 ```
 
@@ -157,57 +162,115 @@ make logs    # follow logs from every service
 `backend`, `worker`, `frontend`) without source bind-mounts, so it stays
 reusable as a base for a future staging/production compose file.
 `docker-compose.dev.yml` adds the bind-mounts and `DJANGO_DEBUG=true`
-needed for local live-reload — the Makefile always merges both files.
+needed for local live-reload - the Makefile always merges both files.
+
+## API
+
+All endpoints are under `/api/v1/`. `cvs/` and `jobs/` follow the same
+shape (`document_type` scoped):
+
+| Method | Path                        | Does                                                        |
+|--------|-----------------------------|--------------------------------------------------------------|
+| GET    | `/api/v1/health/`           | Liveness check                                                |
+| POST   | `/api/v1/cvs/`              | Upload a CV (multipart `file`); `202` + queues processing     |
+| GET    | `/api/v1/cvs/`              | List uploaded CVs                                             |
+| GET    | `/api/v1/cvs/{id}/`         | CV document metadata                                          |
+| GET    | `/api/v1/cvs/{id}/status/`  | Processing status + error (if failed)                         |
+| GET    | `/api/v1/cvs/{id}/profile/` | Structured `CandidateProfile` (`null` until `PROCESSED`)       |
+| POST   | `/api/v1/jobs/`             | Add a job offer (multipart `file`, or JSON `{"text": "..."}`)  |
+| GET    | `/api/v1/jobs/`             | List job offers                                                |
+| GET    | `/api/v1/jobs/{id}/`        | Job document metadata                                          |
+| GET    | `/api/v1/jobs/{id}/status/` | Processing status + error (if failed)                          |
+| GET    | `/api/v1/jobs/{id}/profile/`| Structured `JobProfile` (`null` until `PROCESSED`)              |
+
+No matching/scoring endpoint exists - see [Known limitations](#known-limitations).
+See [docs/api/README.md](docs/api/README.md) and
+[docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md)
+for the full pipeline and response shapes.
 
 ## Backend
 
 Django + Django REST Framework, organized as a modular monolith:
 
-- `config/` — settings (`base` / `development` / `testing` / `production`), root URLs, WSGI/ASGI.
-- `apps/` — Django app configs + persistence models (`users`, `documents`, `candidates`, `jobs`, `skills`, `analyses`, `recommendations`, `tailoring`, `audit`). No models are defined yet.
-- `domain/`, `application/`, `infrastructure/`, `interfaces/` — the Clean Architecture layers; see the dependency-rule doc linked above. Only `interfaces/api/v1/health/` has real logic in Phase 1.
-- `workers/` — Celery app + a single infrastructure smoke-test task (`ping`).
-- `tests/` — pytest suite (`api/`, `unit/`, `integration/`), mirroring the structure the ATS Intelligence Engine will use in later phases.
-
-API versioning starts at `/api/v1/`. The only endpoint today is
-`GET /api/v1/health/`.
+- `config/` - settings (`base` / `development` / `testing` / `production`), root URLs, WSGI/ASGI, and `container.py` (the composition root - see the dependency-rule doc).
+- `apps/` - Django app configs + persistence models. `documents` (Document, Evidence), `candidates` (CandidateProfile + parts), `jobs` (JobProfile, JobRequirement), and `skills` (Skill, SkillAlias, seeded taxonomy) are implemented; `users`, `analyses`, `recommendations`, `tailoring`, `audit` remain boundaries for later phases.
+- `domain/`, `application/`, `infrastructure/`, `interfaces/` - the Clean Architecture layers; see the dependency-rule doc linked above and each layer's own `README.md` for what is implemented vs. reserved.
+- `workers/` - Celery app, an infrastructure smoke-test task (`ping`), and `process_cv_document`/`process_job_document` (the real document processing pipeline).
+- `tests/` - pytest suite (`api/`, `unit/`, `integration/`) plus `tests/fixtures/` (synthetic CV/job fixtures used by parser and extraction tests).
 
 ## Frontend
 
 Angular 19, standalone components, feature-based architecture:
 
-- `core/` — app-wide infrastructure: `config` (typed `APP_CONFIG`, backed by `src/environments/`), `http` (`ApiClientService` + auth/error/loading interceptors), `auth` (models/store/service/guard — **not implemented**, see Known limitations), `services` (notification, file-upload, download).
-- `shared/` — reusable, feature-agnostic UI (`components/ui/placeholder-page` today) and utilities.
-- `layout/` — `MainLayoutComponent` (header + sidebar + router-outlet + footer) used by every route; `AuthLayoutComponent` reserved for future login/signup pages.
-- `features/` — one folder per product capability (`dashboard`, `cvs`, `jobs`, `analysis`, `recommendations`, `tailoring`, `applications`, `settings`), each lazy-loaded from `app.routes.ts`. Only `dashboard` has real logic (the health-check widget); the rest render a shared placeholder page.
+- `core/` - app-wide infrastructure: `config` (typed `APP_CONFIG`, backed by `src/environments/`), `http` (`ApiClientService` + auth/error/loading interceptors), `auth` (models/store/service/guard - **not implemented**, see Known limitations), `services` (notification, file-upload, download).
+- `shared/` - reusable, feature-agnostic UI: `status-badge`, `evidence-note`, `skill-chip`, `upload-dropzone`, `processing-timeline`, `toast-stack` (renders `NotificationService`'s state), plus `pollUntilDone` (the status-polling utility).
+- `layout/` - `MainLayoutComponent` (header + sidebar + router-outlet + footer, responsive down to mobile) used by every route; `AuthLayoutComponent` reserved for future login/signup pages.
+- `features/cvs`, `features/jobs` - upload workspace (`cv-list`/`job-list`) and detail page (`cv-detail`/`job-detail`) that polls status and renders the structured profile view once processed. Real, working features - not placeholders.
+- `features/dashboard` - the Phase 1 health-check widget.
+- `features/analysis`, `recommendations`, `tailoring`, `applications`, `settings` - still placeholder pages (later phases).
+- `styles/` - the design system: tokens (`_tokens.scss`), typography (`_typography.scss`), and shared mixins (`_mixins.scss`). See [Design system](#design-system).
 
 ## Celery
 
 `workers/celery_app.py` configures Celery from Django settings
 (`CELERY_BROKER_URL`/`CELERY_RESULT_BACKEND`, both derived from
-`REDIS_URL`). `workers/tasks/infrastructure_tasks.py` defines `ping`, used
-only to prove the Django → Celery → Redis → worker path works — it is not
-part of the future ATS pipeline. See [backend/workers/README.md](backend/workers/README.md).
+`REDIS_URL`). `workers/tasks/infrastructure_tasks.py` defines `ping`
+(proves the Django -> Celery -> Redis -> worker path works).
+`workers/tasks/document_tasks.py` defines the real pipeline tasks. See
+[backend/workers/README.md](backend/workers/README.md).
+
+## Design system
+
+The frontend uses a bespoke design language (Angular has no equivalent
+to Tailwind/shadcn in this stack) rather than a generic dashboard
+aesthetic: a serif display face (Newsreader) for headings paired with a
+humanist sans (IBM Plex Sans) for UI text and a mono (IBM Plex Mono) for
+data/evidence, one accent color (terracotta) used consistently, mostly-sharp
+surfaces with pill shapes reserved for status/skill chips, and layout
+variety (an editorial document view for profiles, a split upload
+workspace, a processing timeline) instead of repeating a card-grid
+pattern. Status colors (document processing state) are kept separate
+from and never reused as skill/requirement match indicators, since no
+matching engine exists yet. See `frontend/src/styles/_tokens.scss` for
+the full token set.
 
 ## Development guidelines
 
-- Follow the dependency rule: `interfaces → application → domain`, with
-  `infrastructure` implementing abstractions those layers define. `domain/`
-  must never import Django, DRF, Celery, or a vendor SDK.
+- Follow the dependency rule: `interfaces -> application -> domain`, with
+  `infrastructure` implementing abstractions those layers define via
+  duck-typed constructor parameters, wired together only in
+  `config/container.py` (the composition root). `domain/` must never
+  import Django, DRF, Celery, or a vendor SDK.
 - Feature code (frontend or backend) must go through `core/`
   (`ApiClientService`, `APP_CONFIG`) rather than hardcoding URLs.
 - New Django apps/domain modules should follow the existing folder
-  conventions — see [docs/development/getting-started.md](docs/development/getting-started.md).
+  conventions - see [docs/development/getting-started.md](docs/development/getting-started.md).
 - No fake functionality: unimplemented features are represented honestly
   (a placeholder page, a "not implemented" error) rather than mocked data.
+  Confidence values on extracted facts mean extraction confidence, never
+  a claim about the underlying fact - see
+  [docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md).
 
 ## Known limitations
 
 - **Authentication is not implemented.** `core/auth/` exists as a
   structural placeholder (`AuthService.login()` always throws,
   `authGuard` always allows navigation) so later phases can wire in real
-  auth without moving files.
-- **No ESLint configuration for the frontend** — Angular 19's `ng new` no
+  auth without moving files. On the backend, `Document.owner` is
+  nullable and any document's UUID is enough to read its status/profile
+  - a deliberate, temporary development-only assumption (see
+  [docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md)
+  "Security baseline"), not a production access model.
+- **The document extractors are a rule-based v1**, not a general
+  CV/job parser - see phase-2-pipeline.md "Known limitations" for the
+  specific boundaries (entry splitting, title/company parsing, English-
+  oriented section headings). The `CandidateExtractor`/`JobExtractor`
+  abstraction exists so a smarter (or LLM-assisted) extractor can replace
+  it later without touching `application/` or `interfaces/`.
+- **No candidate-job matching, scoring, recommendations, or tailoring.**
+  Phase 2 deliberately stops at structured, evidence-backed profiles -
+  see [Roadmap](#roadmap).
+- **No ESLint configuration for the frontend** - Angular 19's `ng new` no
   longer scaffolds one by default. `make lint-frontend` runs TypeScript's
   type-checker instead; adding ESLint is left for when the team defines a
   house style, rather than adopting Angular CLI's defaults speculatively.
@@ -215,18 +278,16 @@ part of the future ATS pipeline. See [backend/workers/README.md](backend/workers
   [known CPython AST safety issue](https://github.com/psf/black) that
   Black refuses to run under; it works on 3.12.6+ or 3.12.4-. `ruff check`
   (the more substantial static-analysis pass) is unaffected and passes.
-- **No ATS Intelligence Engine yet** — no CV/job parsing, matching,
-  scoring, recommendations, or tailoring. `domain/`, `application/`, and
-  `infrastructure/` only contain the package boundaries (see their
-  respective `README.md`) for Phases 2–5 to fill in.
-- **No production Dockerfile/compose** — `infrastructure/docker/*.Dockerfile`
+- **No production Dockerfile/compose** - `infrastructure/docker/*.Dockerfile`
   and `docker-compose*.yml` are development-only (dev servers, bind
   mounts). `config/settings/production.py` exists for a future deployment
   but isn't exercised by anything in this repository yet.
+- **Storage is local-filesystem only** - `infrastructure/storage/local.py`
+  is the only `FileStorage` implementation. An `S3Storage` can be added
+  later behind the same abstraction without changing any caller.
 
 ## Roadmap
 
-- **Phase 2** — PDF/DOCX parsing, structured `CandidateProfile`/`JobProfile`, skill normalization.
-- **Phase 3** — embeddings, `pgvector`, hybrid (lexical + semantic) search, evidence retrieval.
-- **Phase 4** — deterministic, explainable scoring engine, gap analysis, recommendations.
-- **Phase 5** — LLM-assisted explanations, CV tailoring, and claim validation ("truth layer").
+- **Phase 3** - embeddings, `pgvector`, hybrid (lexical + semantic) search, evidence retrieval, candidate-job matching.
+- **Phase 4** - deterministic, explainable scoring engine, gap analysis, recommendations.
+- **Phase 5** - LLM-assisted explanations, CV tailoring, and claim validation ("truth layer").

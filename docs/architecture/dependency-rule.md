@@ -15,8 +15,12 @@ interfaces → application → domain
    `openai`, `google.genai`, or any other framework/vendor package. It is
    plain Python: entities, value objects, enums, policies, exceptions.
 2. `application/*` orchestrates `domain/*` and depends on infrastructure only
-   through abstractions (e.g. a repository interface, an `LLMProvider`
-   interface) — never a concrete vendor class.
+   through abstractions (e.g. a repository, a `FileStorage`, a
+   `DocumentParser`, a `CandidateExtractor`) - never a concrete vendor
+   class. These abstractions are duck-typed constructor parameters
+   (documented via docstrings), not imported Protocol classes - see
+   "The composition root" below for why `application/*` never imports
+   `infrastructure/*` even to reference a Protocol type.
 3. `infrastructure/*` implements those abstractions (Postgres repositories,
    PDF/DOCX parsers, OpenAI/Gemini providers, S3 storage, Redis cache). It is
    the only layer allowed to import vendor SDKs and Django's ORM.
@@ -24,9 +28,25 @@ interfaces → application → domain
    `application/*` use cases. Views should stay thin: parse input, call a use
    case, serialize output.
 5. `apps/*` contains Django app configuration and persistence models. Models
-   are infrastructure, not domain entities — do not let a serializer or view
+   are infrastructure, not domain entities - do not let a serializer or view
    reach into `domain/` internals and treat a Django model as if it were the
    business entity.
+
+## The composition root
+
+Something has to import both `application/*` use cases and concrete
+`infrastructure/*` implementations to wire them together - that
+something is `config/container.py`, and it is the *only* module allowed
+to do so. `interfaces/api/*` views and `workers/tasks/*` both call
+`config/container.py` factory functions (e.g. `build_cv_processing_pipeline()`)
+instead of importing infrastructure classes or constructing use cases
+themselves.
+
+This is why `application/*` can depend on abstractions "through duck
+typing" rather than importing a Protocol class from `infrastructure/*`:
+the concrete object built in `config/container.py` is passed into the
+use case's constructor, and Python's structural typing means the use
+case never needs to know (or import) the concrete class's module.
 
 ## Why this matters for CVScanner specifically
 
