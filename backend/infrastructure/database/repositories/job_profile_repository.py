@@ -1,6 +1,7 @@
-"""Persists a domain JobProfile (+ its embedded Evidence) as Django rows.
-Mirrors candidate_profile_repository.py's approach and idempotency
-(reprocessing replaces the previous structured data).
+"""Persists a domain JobProfile (+ its embedded Evidence) as Django rows,
+and reads one back for Phase 4's matching engine. Mirrors
+candidate_profile_repository.py's approach and idempotency (reprocessing
+replaces the previous structured data).
 """
 from django.db import transaction
 
@@ -9,11 +10,40 @@ from apps.documents.models import Evidence as DjangoEvidence
 from apps.jobs.models import JobProfile as DjangoJobProfile
 from apps.jobs.models import JobRequirement
 from apps.skills.models import Skill as DjangoSkill
+from domain.documents.enums import ExtractionMethod, SectionType
 from domain.documents.evidence import Evidence
 from domain.job.entities import JobProfile
+from domain.job.entities import JobRequirement as DomainJobRequirement
+from domain.job.enums import RequirementImportance, RequirementType
+from infrastructure.database.repositories.skill_repository import DjangoSkillRepository
 
 
 class DjangoJobProfileRepository:
+    def get(self, document_id: str) -> JobProfile | None:
+        row = (
+            DjangoJobProfile.objects.filter(document_id=document_id)
+            .prefetch_related("requirements__evidence", "requirements__skill")
+            .first()
+        )
+        if row is None:
+            return None
+
+        skill_repository = DjangoSkillRepository()
+        return JobProfile(
+            title=row.title,
+            company=row.company,
+            location=row.location,
+            employment_type=row.employment_type,
+            seniority=row.seniority,
+            summary=row.summary,
+            seniority_normalized=row.seniority_normalized,
+            responsibilities=tuple(row.responsibilities),
+            requirements=tuple(
+                _requirement_from_row(requirement, skill_repository)
+                for requirement in row.requirements.all()
+            ),
+        )
+
     @transaction.atomic
     def save(self, document_id: str, profile: JobProfile, document_level_evidence: list[Evidence]) -> None:
         DjangoJobProfile.objects.filter(document_id=document_id).delete()
@@ -63,6 +93,36 @@ def _resolve_skill(skill) -> DjangoSkill | None:
     if skill is None:
         return None
     return DjangoSkill.objects.filter(canonical_name=skill.canonical_name).first()
+
+
+def _evidence_from_row(row: DjangoEvidence | None) -> Evidence | None:
+    if row is None:
+        return None
+    return Evidence(
+        source_document_id=str(row.source_document_id),
+        text=row.text,
+        extraction_method=ExtractionMethod(row.extraction_method),
+        confidence=row.confidence,
+        page_number=row.page_number,
+        section=SectionType(row.section) if row.section else None,
+        start_offset=row.start_offset,
+        end_offset=row.end_offset,
+        metadata=row.metadata,
+    )
+
+
+def _requirement_from_row(
+    row: JobRequirement, skill_repository: DjangoSkillRepository
+) -> DomainJobRequirement:
+    return DomainJobRequirement(
+        requirement_type=RequirementType(row.requirement_type),
+        importance=RequirementImportance(row.importance),
+        raw_text=row.raw_text,
+        skill=skill_repository.get_by_name(row.skill.canonical_name) if row.skill else None,
+        minimum_years=row.minimum_years,
+        normalized_value=row.normalized_value,
+        evidence=_evidence_from_row(row.evidence),
+    )
 
 
 class DjangoJobEnrichmentRepository:

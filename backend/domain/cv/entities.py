@@ -9,9 +9,18 @@ facts that don't map onto one list item (full_name, contact fields,
 summary) are not embedded here; their evidence is returned alongside the
 profile by the extractor instead - see
 infrastructure/document_processing/extraction/candidate_extractor.py.
+
+Phase 3 added `seniority`/`degree_level`/`canonical_name`/
+`proficiency_normalized` - values derived from the fields already here
+(see application/semantics/enrich_candidate_profile.py), never replacing
+them. Phase 4's matching engine (domain/matching/) reads these directly
+instead of re-deriving them.
 """
 from dataclasses import dataclass, field
 
+from domain.cv.education_normalization import EducationLevel
+from domain.cv.language_normalization import LanguageProficiency
+from domain.cv.seniority import SeniorityLevel
 from domain.documents.evidence import Evidence
 from domain.skills.entities import Skill
 
@@ -33,6 +42,7 @@ class Experience:
     description: str | None
     achievements: tuple[str, ...] = field(default_factory=tuple)
     technologies: tuple[str, ...] = field(default_factory=tuple)
+    seniority: SeniorityLevel | None = None
     evidence: Evidence | None = None
 
 
@@ -43,6 +53,7 @@ class Education:
     field_of_study: str | None
     start_date_raw: str | None
     end_date_raw: str | None
+    degree_level: EducationLevel | None = None
     evidence: Evidence | None = None
 
 
@@ -66,6 +77,8 @@ class Certification:
 class Language:
     name: str
     proficiency: str | None = None
+    canonical_name: str | None = None
+    proficiency_normalized: LanguageProficiency | None = None
     evidence: Evidence | None = None
 
 
