@@ -1,0 +1,14 @@
+# Force LF endings for files that run inside Linux containers or are
+# parsed by tools that care (shell scripts, Dockerfiles, YAML). Without
+# this, Windows checkouts with core.autocrlf=true would convert these to
+# CRLF, breaking shebangs (`$'\r': command not found`) once copied into a
+# Linux-based Docker image.
+* text=auto eol=lf
+
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+*.py text eol=lf
+*.ts text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
