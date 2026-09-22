@@ -115,6 +115,18 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ---------------------------------------------------------------------------
+# Media (uploaded documents) - not served as static files; see
+# infrastructure/storage/local.py and docs/architecture/phase-2-pipeline.md
+# ---------------------------------------------------------------------------
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "mediafiles"
+
+# Matches domain.documents.policies.MAX_FILE_SIZE_BYTES so Django itself
+# doesn't buffer a too-large upload into memory before validation runs.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
+# ---------------------------------------------------------------------------
 # Django REST Framework
 # ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
