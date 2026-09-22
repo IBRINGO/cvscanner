@@ -76,6 +76,7 @@ class ExperienceSerializer(serializers.ModelSerializer):
             "description",
             "achievements",
             "technologies",
+            "seniority",
             "evidence",
         ]
 
@@ -85,7 +86,15 @@ class EducationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Education
-        fields = ["institution", "degree", "field_of_study", "start_date_raw", "end_date_raw", "evidence"]
+        fields = [
+            "institution",
+            "degree",
+            "field_of_study",
+            "start_date_raw",
+            "end_date_raw",
+            "degree_level",
+            "evidence",
+        ]
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -105,7 +114,7 @@ class CertificationSerializer(serializers.ModelSerializer):
 class LanguageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Language
-        fields = ["name", "proficiency"]
+        fields = ["name", "proficiency", "canonical_name", "proficiency_normalized"]
 
 
 class CandidateProfileSerializer(serializers.ModelSerializer):

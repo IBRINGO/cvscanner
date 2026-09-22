@@ -40,6 +40,59 @@ class TestCvProfile:
         assert "id" not in skill["evidence"]
         assert "source_document" not in skill["evidence"]
 
+    def test_experiences_carry_normalized_seniority_and_merged_technologies(self, api_client, cv_pdf_bytes):
+        upload = api_client.post(
+            reverse("cv-list-create"),
+            {"file": make_upload("sample_cv.pdf", cv_pdf_bytes, "application/pdf")},
+            format="multipart",
+        )
+
+        response = api_client.get(reverse("cv-profile", args=[upload.data["id"]]))
+
+        experiences = response.data["profile"]["experiences"]
+        senior_experience = next(e for e in experiences if e["title"] == "Senior Backend Engineer")
+        assert senior_experience["seniority"] == "SENIOR"
+        assert "Django" in senior_experience["technologies"]
+
+    def test_education_carries_normalized_degree_level(self, api_client, cv_pdf_bytes):
+        upload = api_client.post(
+            reverse("cv-list-create"),
+            {"file": make_upload("sample_cv.pdf", cv_pdf_bytes, "application/pdf")},
+            format="multipart",
+        )
+
+        response = api_client.get(reverse("cv-profile", args=[upload.data["id"]]))
+
+        education = response.data["profile"]["education"][0]
+        assert education["degree_level"] == "BACHELOR"
+
+    def test_language_carries_canonical_name_and_normalized_proficiency(self, api_client, cv_pdf_bytes):
+        upload = api_client.post(
+            reverse("cv-list-create"),
+            {"file": make_upload("sample_cv.pdf", cv_pdf_bytes, "application/pdf")},
+            format="multipart",
+        )
+
+        response = api_client.get(reverse("cv-profile", args=[upload.data["id"]]))
+
+        english = next(lang for lang in response.data["profile"]["languages"] if lang["name"] == "English")
+        assert english["canonical_name"] == "English"
+        assert english["proficiency_normalized"] == "NATIVE"
+
+    def test_no_match_or_compatibility_field_anywhere_in_response(self, api_client, cv_pdf_bytes):
+        upload = api_client.post(
+            reverse("cv-list-create"),
+            {"file": make_upload("sample_cv.pdf", cv_pdf_bytes, "application/pdf")},
+            format="multipart",
+        )
+
+        response = api_client.get(reverse("cv-profile", args=[upload.data["id"]]))
+
+        body = str(response.data).lower()
+        assert "match_score" not in body
+        assert "compatibility" not in body
+        assert "ats_score" not in body
+
     def test_unprocessed_document_returns_null_profile(self, api_client):
         # Bypasses the upload flow to freeze the document in UPLOADED -
         # exercises the "not ready yet" branch the frontend polls against.

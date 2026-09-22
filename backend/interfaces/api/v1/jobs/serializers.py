@@ -52,7 +52,15 @@ class JobRequirementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JobRequirement
-        fields = ["requirement_type", "importance", "raw_text", "skill", "evidence"]
+        fields = [
+            "requirement_type",
+            "importance",
+            "raw_text",
+            "skill",
+            "minimum_years",
+            "normalized_value",
+            "evidence",
+        ]
 
 
 class JobProfileSerializer(serializers.ModelSerializer):
@@ -66,6 +74,7 @@ class JobProfileSerializer(serializers.ModelSerializer):
             "location",
             "employment_type",
             "seniority",
+            "seniority_normalized",
             "summary",
             "responsibilities",
             "requirements",
