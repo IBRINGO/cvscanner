@@ -1,0 +1,584 @@
+
+### High Level Architecture
+cvscanner/
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── angular.json
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── ...
+│
+├── backend/
+│   ├── config/
+│   ├── apps/
+│   ├── domain/
+│   ├── application/
+│   ├── infrastructure/
+│   ├── interfaces/
+│   ├── workers/
+│   ├── tests/
+│   ├── manage.py
+│   ├── pyproject.toml
+│   └── ...
+│
+├── docs/
+│   ├── product/
+│   ├── architecture/
+│   ├── api/
+│   └── decisions/
+│
+├── infrastructure/
+│   ├── docker/
+│   ├── nginx/
+│   └── scripts/
+│
+├── .github/
+│   └── workflows/
+│
+├── docker-compose.yml
+├── docker-compose.dev.yml
+├── docker-compose.prod.yml
+├── .env.example
+├── .gitignore
+└── README.md
+
+
+### Frontend
+frontend/
+│
+├── src/
+│   │
+│   ├── app/
+│   │   │
+│   │   ├── core/
+│   │   │   │
+│   │   │   ├── auth/
+│   │   │   │   ├── auth.service.ts
+│   │   │   │   ├── auth.store.ts
+│   │   │   │   ├── auth.guard.ts
+│   │   │   │   └── auth.models.ts
+│   │   │   │
+│   │   │   ├── http/
+│   │   │   │   ├── api-client.service.ts
+│   │   │   │   ├── auth.interceptor.ts
+│   │   │   │   ├── error.interceptor.ts
+│   │   │   │   └── loading.interceptor.ts
+│   │   │   │
+│   │   │   ├── services/
+│   │   │   │   ├── notification.service.ts
+│   │   │   │   ├── file-upload.service.ts
+│   │   │   │   └── download.service.ts
+│   │   │   │
+│   │   │   ├── guards/
+│   │   │   ├── interceptors/
+│   │   │   └── config/
+│   │   │
+│   │   ├── shared/
+│   │   │   │
+│   │   │   ├── components/
+│   │   │   │   ├── ui/
+│   │   │   │   ├── buttons/
+│   │   │   │   ├── dialogs/
+│   │   │   │   ├── cards/
+│   │   │   │   ├── tables/
+│   │   │   │   ├── badges/
+│   │   │   │   ├── progress/
+│   │   │   │   └── charts/
+│   │   │   │
+│   │   │   ├── directives/
+│   │   │   ├── pipes/
+│   │   │   ├── validators/
+│   │   │   ├── models/
+│   │   │   └── utils/
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── main-layout/
+│   │   │   ├── auth-layout/
+│   │   │   ├── sidebar/
+│   │   │   ├── header/
+│   │   │   └── footer/
+│   │   │
+│   │   ├── features/
+│   │   │   │
+│   │   │   ├── dashboard/
+│   │   │   │   ├── pages/
+│   │   │   │   │   └── dashboard-page/
+│   │   │   │   ├── components/
+│   │   │   │   ├── services/
+│   │   │   │   ├── store/
+│   │   │   │   └── models/
+│   │   │   │
+│   │   │   ├── cvs/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── cv-list/
+│   │   │   │   │   ├── cv-upload/
+│   │   │   │   │   ├── cv-detail/
+│   │   │   │   │   └── cv-version/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── cv-card/
+│   │   │   │   │   ├── cv-upload-zone/
+│   │   │   │   │   ├── cv-preview/
+│   │   │   │   │   └── cv-section/
+│   │   │   │   ├── services/
+│   │   │   │   ├── store/
+│   │   │   │   └── models/
+│   │   │   │
+│   │   │   ├── jobs/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── job-list/
+│   │   │   │   │   ├── job-create/
+│   │   │   │   │   └── job-detail/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── job-card/
+│   │   │   │   │   ├── job-form/
+│   │   │   │   │   └── requirement-list/
+│   │   │   │   ├── services/
+│   │   │   │   ├── store/
+│   │   │   │   └── models/
+│   │   │   │
+│   │   │   ├── analysis/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── analysis-list/
+│   │   │   │   │   ├── analysis-loading/
+│   │   │   │   │   ├── analysis-overview/
+│   │   │   │   │   ├── analysis-skills/
+│   │   │   │   │   ├── analysis-requirements/
+│   │   │   │   │   ├── analysis-evidence/
+│   │   │   │   │   ├── analysis-gaps/
+│   │   │   │   │   └── analysis-score/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── score-card/
+│   │   │   │   │   ├── score-breakdown/
+│   │   │   │   │   ├── requirement-match/
+│   │   │   │   │   ├── evidence-card/
+│   │   │   │   │   ├── skill-match/
+│   │   │   │   │   └── analysis-progress/
+│   │   │   │   ├── services/
+│   │   │   │   ├── store/
+│   │   │   │   └── models/
+│   │   │   │
+│   │   │   ├── recommendations/
+│   │   │   │   ├── pages/
+│   │   │   │   │   └── recommendations-page/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── recommendation-card/
+│   │   │   │   │   ├── recommendation-group/
+│   │   │   │   │   └── impact-indicator/
+│   │   │   │   ├── services/
+│   │   │   │   ├── store/
+│   │   │   │   └── models/
+│   │   │   │
+│   │   │   ├── tailoring/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── tailoring-config/
+│   │   │   │   │   ├── tailoring-progress/
+│   │   │   │   │   ├── tailored-cv/
+│   │   │   │   │   └── version-comparison/
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── cv-diff/
+│   │   │   │   │   ├── claim-warning/
+│   │   │   │   │   └── validation-result/
+│   │   │   │   ├── services/
+│   │   │   │   ├── store/
+│   │   │   │   └── models/
+│   │   │   │
+│   │   │   ├── applications/
+│   │   │   │   ├── pages/
+│   │   │   │   ├── components/
+│   │   │   │   ├── services/
+│   │   │   │   ├── store/
+│   │   │   │   └── models/
+│   │   │   │
+│   │   │   └── settings/
+│   │   │       ├── pages/
+│   │   │       ├── components/
+│   │   │       └── services/
+│   │   │
+│   │   ├── app.routes.ts
+│   │   ├── app.config.ts
+│   │   └── app.component.ts
+│   │
+│   ├── assets/
+│   │   ├── icons/
+│   │   ├── images/
+│   │   └── illustrations/
+│   │
+│   ├── styles/
+│   │   ├── _variables.scss
+│   │   ├── _mixins.scss
+│   │   ├── _typography.scss
+│   │   └── styles.scss
+│   │
+│   └── main.ts
+│
+├── angular.json
+├── package.json
+├── tsconfig.json
+└── README.md
+
+### Backend
+backend/
+│
+├── manage.py
+├── pyproject.toml
+├── pytest.ini
+├── .env.example
+│
+├── config/
+│   ├── __init__.py
+│   ├── urls.py
+│   ├── asgi.py
+│   ├── wsgi.py
+│   │
+│   └── settings/
+│       ├── __init__.py
+│       ├── base.py
+│       ├── development.py
+│       ├── testing.py
+│       └── production.py
+│
+├── apps/
+│   │
+│   ├── users/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   ├── documents/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   ├── candidates/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   ├── jobs/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   ├── skills/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   ├── analyses/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   ├── recommendations/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   ├── tailoring/
+│   │   ├── migrations/
+│   │   ├── admin.py
+│   │   ├── apps.py
+│   │   ├── models.py
+│   │   └── ...
+│   │
+│   └── audit/
+│       ├── migrations/
+│       ├── admin.py
+│       ├── apps.py
+│       ├── models.py
+│       └── ...
+│
+├── domain/
+│   │
+│   ├── cv/
+│   │   ├── entities.py
+│   │   ├── value_objects.py
+│   │   ├── enums.py
+│   │   ├── policies.py
+│   │   └── exceptions.py
+│   │
+│   ├── candidate/
+│   │   ├── entities.py
+│   │   ├── value_objects.py
+│   │   ├── enums.py
+│   │   └── exceptions.py
+│   │
+│   ├── job/
+│   │   ├── entities.py
+│   │   ├── value_objects.py
+│   │   ├── enums.py
+│   │   └── exceptions.py
+│   │
+│   ├── skills/
+│   │   ├── entities.py
+│   │   ├── taxonomy.py
+│   │   ├── normalization.py
+│   │   ├── relationships.py
+│   │   └── exceptions.py
+│   │
+│   ├── matching/
+│   │   ├── entities.py
+│   │   ├── matchers.py
+│   │   ├── strategies.py
+│   │   ├── evidence.py
+│   │   └── exceptions.py
+│   │
+│   ├── scoring/
+│   │   ├── entities.py
+│   │   ├── calculator.py
+│   │   ├── weights.py
+│   │   ├── rules.py
+│   │   └── exceptions.py
+│   │
+│   ├── recommendations/
+│   │   ├── entities.py
+│   │   ├── rules.py
+│   │   └── prioritization.py
+│   │
+│   └── tailoring/
+│       ├── entities.py
+│       ├── policies.py
+│       └── validation.py
+│
+├── application/
+│   │
+│   ├── cv/
+│   │   ├── upload_cv.py
+│   │   ├── parse_cv.py
+│   │   ├── structure_cv.py
+│   │   └── normalize_cv.py
+│   │
+│   ├── jobs/
+│   │   ├── create_job.py
+│   │   ├── parse_job.py
+│   │   └── structure_job.py
+│   │
+│   ├── analysis/
+│   │   ├── create_analysis.py
+│   │   ├── run_analysis.py
+│   │   ├── get_analysis.py
+│   │   └── compare_analyses.py
+│   │
+│   ├── matching/
+│   │   ├── match_requirements.py
+│   │   ├── retrieve_evidence.py
+│   │   └── rank_matches.py
+│   │
+│   ├── scoring/
+│   │   └── calculate_ats_score.py
+│   │
+│   ├── recommendations/
+│   │   └── generate_recommendations.py
+│   │
+│   └── tailoring/
+│       ├── generate_tailored_cv.py
+│       ├── validate_tailored_cv.py
+│       └── compare_cv_versions.py
+│
+├── infrastructure/
+│   │
+│   ├── database/
+│   │   ├── repositories/
+│   │   │   ├── candidate_repository.py
+│   │   │   ├── cv_repository.py
+│   │   │   ├── job_repository.py
+│   │   │   ├── skill_repository.py
+│   │   │   └── analysis_repository.py
+│   │   └── unit_of_work.py
+│   │
+│   ├── document_processing/
+│   │   ├── parsers/
+│   │   │   ├── base.py
+│   │   │   ├── pdf_parser.py
+│   │   │   └── docx_parser.py
+│   │   ├── extraction/
+│   │   │   ├── text_extractor.py
+│   │   │   └── section_detector.py
+│   │   └── ocr/
+│   │       └── ...
+│   │
+│   ├── llm/
+│   │   ├── base.py
+│   │   ├── factory.py
+│   │   ├── schemas/
+│   │   │   ├── cv_extraction.py
+│   │   │   ├── job_extraction.py
+│   │   │   ├── recommendations.py
+│   │   │   └── tailoring.py
+│   │   └── providers/
+│   │       ├── openai.py
+│   │       ├── gemini.py
+│   │       └── mock.py
+│   │
+│   ├── embeddings/
+│   │   ├── base.py
+│   │   ├── factory.py
+│   │   └── providers/
+│   │       ├── openai.py
+│   │       └── gemini.py
+│   │
+│   ├── vector_store/
+│   │   ├── base.py
+│   │   └── pgvector.py
+│   │
+│   ├── search/
+│   │   ├── lexical_search.py
+│   │   ├── semantic_search.py
+│   │   └── hybrid_search.py
+│   │
+│   ├── storage/
+│   │   ├── base.py
+│   │   └── s3.py
+│   │
+│   ├── cache/
+│   │   └── redis.py
+│   │
+│   └── observability/
+│       ├── logging.py
+│       ├── metrics.py
+│       └── tracing.py
+│
+├── interfaces/
+│   │
+│   └── api/
+│       ├── v1/
+│       │   ├── urls.py
+│       │   │
+│       │   ├── auth/
+│       │   │   ├── serializers.py
+│       │   │   ├── views.py
+│       │   │   └── urls.py
+│       │   │
+│       │   ├── cvs/
+│       │   │   ├── serializers.py
+│       │   │   ├── views.py
+│       │   │   ├── filters.py
+│       │   │   └── urls.py
+│       │   │
+│       │   ├── jobs/
+│       │   │   ├── serializers.py
+│       │   │   ├── views.py
+│       │   │   └── urls.py
+│       │   │
+│       │   ├── analyses/
+│       │   │   ├── serializers.py
+│       │   │   ├── views.py
+│       │   │   └── urls.py
+│       │   │
+│       │   ├── recommendations/
+│       │   │   ├── serializers.py
+│       │   │   └── views.py
+│       │   │
+│       │   └── tailoring/
+│       │       ├── serializers.py
+│       │       ├── views.py
+│       │       └── urls.py
+│       │
+│       └── common/
+│           ├── pagination.py
+│           ├── exceptions.py
+│           ├── permissions.py
+│           └── responses.py
+│
+├── workers/
+│   │
+│   ├── celery_app.py
+│   ├── tasks/
+│   │   ├── cv_tasks.py
+│   │   ├── job_tasks.py
+│   │   ├── embedding_tasks.py
+│   │   ├── analysis_tasks.py
+│   │   ├── recommendation_tasks.py
+│   │   └── tailoring_tasks.py
+│   │
+│   └── workflows/
+│       ├── cv_pipeline.py
+│       ├── job_pipeline.py
+│       └── analysis_pipeline.py
+│
+└── tests/
+    │
+    ├── unit/
+    │   ├── domain/
+    │   ├── application/
+    │   └── infrastructure/
+    │
+    ├── integration/
+    │   ├── database/
+    │   ├── llm/
+    │   ├── embeddings/
+    │   └── storage/
+    │
+    ├── api/
+    │   ├── auth/
+    │   ├── cvs/
+    │   ├── jobs/
+    │   └── analyses/
+    │
+    ├── ai/
+    │   ├── extraction/
+    │   ├── matching/
+    │   ├── scoring/
+    │   └── hallucination/
+    │
+    └── e2e/
+        └── analysis_flow/
+
+
+
+### Spring 1
+Phase 1
+├── Monorepo
+├── Angular
+├── Django + DRF
+├── PostgreSQL
+├── Docker Compose
+├── Authentication
+├── User
+├── Document
+├── CV
+└── Job
+
+
+### Spring 2
+Phase 2
+→ PDF/DOCX parsing
+→ CandidateProfile
+→ JobProfile
+→ Skill normalization
+
+### Spring 3
+Phase 3
+→ pgvector
+→ hybrid search
+→ evidence
+→ matching
+
+### Spring 4
+Phase 4
+→ scoring engine
+→ gap analysis
+→ recommendations
+
+### Spring 5
+Phase 5
+→ LLM
+→ Truth Layer
+→ CV tailoring
+→ validation
