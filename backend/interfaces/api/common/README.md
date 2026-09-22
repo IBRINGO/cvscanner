@@ -14,3 +14,8 @@ an extra layer of indirection for a reader trying to find "what does
 resource needs the same shape, or once the duplication itself becomes
 the source of bugs (e.g. one resource's validation drifting from the
 other's).
+
+Phase 3 added `skills/` - a read-only resource with a different shape
+(list + one detail lookup by name, no upload/status/profile) - so it
+was not folded into the same "would a shared base class help" question
+above.

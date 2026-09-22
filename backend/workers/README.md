@@ -10,8 +10,13 @@ Celery application and asynchronous task definitions.
   explicitly **not** part of the ATS pipeline.
 - `tasks/document_tasks.py` - `process_cv_document` and
   `process_job_document`: each runs the full validate/parse/detect
-  sections/extract/normalize/persist pipeline for one document (see
-  [docs/architecture/phase-2-pipeline.md](../../docs/architecture/phase-2-pipeline.md)).
+  sections/extract/normalize/persist pipeline for one document, then
+  the Phase 3 semantic enrichment/embedding step (see
+  [docs/architecture/phase-2-pipeline.md](../../docs/architecture/phase-2-pipeline.md)
+  and
+  [docs/architecture/phase-3-semantics.md](../../docs/architecture/phase-3-semantics.md)).
+  A failure in the Phase 3 step is caught inside the pipeline and never
+  fails the task - the document still ends up `PROCESSED`.
   One task per document type rather than one task per pipeline stage -
   the stages only make sense to retry together. Both tasks are thin: the
   actual orchestration lives in `application/cv/process_pipeline.py` and

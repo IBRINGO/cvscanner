@@ -7,11 +7,15 @@ requirements, produces an explainable score, and recommends improvements
 (including, eventually, a tailored CV with claims validated against
 evidence).
 
-**This repository is at Phase 2: Document Intelligence.** CVs and job
-offers can be uploaded, parsed, and structured into evidence-backed
-profiles with normalized skills. Candidate-job matching, scoring,
-recommendations, and CV tailoring are not implemented yet - see
-[Roadmap](#roadmap) and [Known limitations](#known-limitations).
+**This repository is at Phase 3: Semantic Intelligence and Knowledge
+Enrichment.** CVs and job offers can be uploaded, parsed, and structured
+into evidence-backed profiles with normalized skills (Phase 2), which
+Phase 3 further enriches: skill relationships and ecosystems, seniority/
+education/language normalization, technology mentions scanned from
+prose, structured experience requirements, and an optional embedding
+foundation. Candidate-job matching, scoring, recommendations, and CV
+tailoring are not implemented yet - see [Roadmap](#roadmap) and
+[Known limitations](#known-limitations).
 
 ## Architecture
 
@@ -129,9 +133,12 @@ Or via the Makefile: `make backend`, `make frontend`, `make worker`,
 ## Environment variables
 
 See [.env.example](.env.example) for the full list (Postgres, Redis,
-Django, CORS, and the frontend's `API_BASE_URL`). Variables for future
-phases (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `S3_*`) are documented there
-but unused in Phase 1.
+Django, CORS, and the frontend's `API_BASE_URL`). `OPENAI_API_KEY` and
+`EMBEDDING_MODEL` are now used (Phase 3) - see
+[docs/architecture/phase-3-semantics.md](docs/architecture/phase-3-semantics.md);
+leaving `OPENAI_API_KEY` unset is fully supported and falls back to a
+deterministic local embedding provider. `GEMINI_API_KEY`, `S3_*` remain
+documented but unused for later phases.
 
 ## Running tests
 
@@ -181,11 +188,20 @@ shape (`document_type` scoped):
 | GET    | `/api/v1/jobs/`             | List job offers                                                |
 | GET    | `/api/v1/jobs/{id}/`        | Job document metadata                                          |
 | GET    | `/api/v1/jobs/{id}/status/` | Processing status + error (if failed)                          |
-| GET    | `/api/v1/jobs/{id}/profile/`| Structured `JobProfile` (`null` until `PROCESSED`)              |
+| GET    | `/api/v1/jobs/{id}/profile/`| Structured `JobProfile` (`null` until `PROCESSED`, now includes Phase 3 fields - see below) |
+| GET    | `/api/v1/skills/`           | The full skill taxonomy (category, domain, ecosystem, description) |
+| GET    | `/api/v1/skills/{canonical_name}/` | One skill's relationships (parent, children, ecosystem siblings, explicit relations) |
+
+`CandidateProfile`/`JobProfile` responses carry Phase 3's normalized
+fields alongside the Phase 2 raw ones: `Experience.seniority`,
+`Education.degree_level`, `Language.canonical_name`/
+`proficiency_normalized`, `JobProfile.seniority_normalized`,
+`JobRequirement.minimum_years`/`normalized_value`.
 
 No matching/scoring endpoint exists - see [Known limitations](#known-limitations).
-See [docs/api/README.md](docs/api/README.md) and
-[docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md)
+See [docs/api/README.md](docs/api/README.md),
+[docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md),
+and [docs/architecture/phase-3-semantics.md](docs/architecture/phase-3-semantics.md)
 for the full pipeline and response shapes.
 
 ## Backend
@@ -193,9 +209,9 @@ for the full pipeline and response shapes.
 Django + Django REST Framework, organized as a modular monolith:
 
 - `config/` - settings (`base` / `development` / `testing` / `production`), root URLs, WSGI/ASGI, and `container.py` (the composition root - see the dependency-rule doc).
-- `apps/` - Django app configs + persistence models. `documents` (Document, Evidence), `candidates` (CandidateProfile + parts), `jobs` (JobProfile, JobRequirement), and `skills` (Skill, SkillAlias, seeded taxonomy) are implemented; `users`, `analyses`, `recommendations`, `tailoring`, `audit` remain boundaries for later phases.
+- `apps/` - Django app configs + persistence models. `documents` (Document, Evidence), `candidates` (CandidateProfile + parts, now with Phase 3 normalized fields), `jobs` (JobProfile, JobRequirement, same extension), `skills` (Skill, SkillAlias, SkillRelation, seeded taxonomy), and `semantics` (SemanticRepresentation) are implemented; `users`, `analyses`, `recommendations`, `tailoring`, `audit` remain boundaries for later phases.
 - `domain/`, `application/`, `infrastructure/`, `interfaces/` - the Clean Architecture layers; see the dependency-rule doc linked above and each layer's own `README.md` for what is implemented vs. reserved.
-- `workers/` - Celery app, an infrastructure smoke-test task (`ping`), and `process_cv_document`/`process_job_document` (the real document processing pipeline).
+- `workers/` - Celery app, an infrastructure smoke-test task (`ping`), and `process_cv_document`/`process_job_document` (the real document processing pipeline, now including Phase 3 enrichment/embedding).
 - `tests/` - pytest suite (`api/`, `unit/`, `integration/`) plus `tests/fixtures/` (synthetic CV/job fixtures used by parser and extraction tests).
 
 ## Frontend
@@ -203,10 +219,12 @@ Django + Django REST Framework, organized as a modular monolith:
 Angular 19, standalone components, feature-based architecture:
 
 - `core/` - app-wide infrastructure: `config` (typed `APP_CONFIG`, backed by `src/environments/`), `http` (`ApiClientService` + auth/error/loading interceptors), `auth` (models/store/service/guard - **not implemented**, see Known limitations), `services` (notification, file-upload, download).
-- `shared/` - reusable, feature-agnostic UI: `status-badge`, `evidence-note`, `skill-chip`, `upload-dropzone`, `processing-timeline`, `toast-stack` (renders `NotificationService`'s state), plus `pollUntilDone` (the status-polling utility).
+- `shared/` - reusable, feature-agnostic UI: `status-badge`, `evidence-note`, `skill-chip` (now with a lazily-loaded related-skills panel), `entity-tag`, `upload-dropzone`, `processing-timeline`, `toast-stack` (renders `NotificationService`'s state), plus `pollUntilDone` (the status-polling utility) and `formatEnumLabel` (shared enum-to-label formatting).
+- `core/icons.ts` - the single registered icon set (Lucide, via `@ng-icons`), provided once at the app root.
 - `layout/` - `MainLayoutComponent` (header + sidebar + router-outlet + footer, responsive down to mobile) used by every route; `AuthLayoutComponent` reserved for future login/signup pages.
-- `features/cvs`, `features/jobs` - upload workspace (`cv-list`/`job-list`) and detail page (`cv-detail`/`job-detail`) that polls status and renders the structured profile view once processed. Real, working features - not placeholders.
-- `features/dashboard` - the Phase 1 health-check widget.
+- `features/cvs`, `features/jobs` - upload workspace (`cv-list`/`job-list`) and detail page (`cv-detail`/`job-detail`) that polls status and renders the structured profile view once processed, including Phase 3's seniority/education/language/requirement enrichment. Real, working features - not placeholders.
+- `features/skills` - the skill taxonomy API client and the related-skills panel used from `skill-chip`.
+- `features/dashboard` - a real workspace (recent CVs, recent job offers, processing counts, skill taxonomy landscape) plus the Phase 1 health-check widget.
 - `features/analysis`, `recommendations`, `tailoring`, `applications`, `settings` - still placeholder pages (later phases).
 - `styles/` - the design system: tokens (`_tokens.scss`), typography (`_typography.scss`), and shared mixins (`_mixins.scss`). See [Design system](#design-system).
 
@@ -233,6 +251,13 @@ pattern. Status colors (document processing state) are kept separate
 from and never reused as skill/requirement match indicators, since no
 matching engine exists yet. See `frontend/src/styles/_tokens.scss` for
 the full token set.
+
+Phase 3 added a single icon family (Lucide, via `@ng-icons`, registered
+once in `core/icons.ts`) used for navigation, section headers, document
+types, skills, and status - never emoji, never a mixed set. Skill chips
+gained a lazily-loaded related-skills panel (network icon, fetched only
+on click), and normalized values (seniority, education level, language
+proficiency) render through one shared `entity-tag` primitive.
 
 ## Development guidelines
 
@@ -268,8 +293,18 @@ the full token set.
   abstraction exists so a smarter (or LLM-assisted) extractor can replace
   it later without touching `application/` or `interfaces/`.
 - **No candidate-job matching, scoring, recommendations, or tailoring.**
-  Phase 2 deliberately stops at structured, evidence-backed profiles -
-  see [Roadmap](#roadmap).
+  Phases 2 and 3 deliberately stop at structured, evidence-backed, and
+  now semantically enriched profiles - see [Roadmap](#roadmap).
+- **Seniority/education/language normalization are keyword tables, not
+  an NLP classifier** - the same "rule-based v1" boundary Phase 2
+  documented for extraction, applied to Phase 3's normalization. See
+  [docs/architecture/phase-3-semantics.md](docs/architecture/phase-3-semantics.md)
+  "Known limitations".
+- **Embeddings are stored as JSON, not indexed** - `FakeEmbeddingProvider`
+  is the default (no network, no API key); `OpenAIEmbeddingProvider`
+  activates only when `OPENAI_API_KEY` is configured. No similarity
+  search exists yet - see
+  [ADR 0002](docs/adr/0002-json-embeddings-not-pgvector.md).
 - **No ESLint configuration for the frontend** - Angular 19's `ng new` no
   longer scaffolds one by default. `make lint-frontend` runs TypeScript's
   type-checker instead; adding ESLint is left for when the team defines a
@@ -288,6 +323,10 @@ the full token set.
 
 ## Roadmap
 
-- **Phase 3** - embeddings, `pgvector`, hybrid (lexical + semantic) search, evidence retrieval, candidate-job matching.
-- **Phase 4** - deterministic, explainable scoring engine, gap analysis, recommendations.
-- **Phase 5** - LLM-assisted explanations, CV tailoring, and claim validation ("truth layer").
+- **Phase 4** - the ATS Matching Engine: candidate-job matching over the
+  semantic representations Phase 3 produced, evidence retrieval, and
+  (if justified once real query volume exists) indexed vector search.
+- **Phase 5** - deterministic, explainable scoring engine, gap analysis,
+  recommendations.
+- **Phase 6** - LLM-assisted explanations, CV tailoring, and claim
+  validation ("truth layer").

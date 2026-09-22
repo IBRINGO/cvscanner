@@ -10,11 +10,17 @@ this package must never import Django, DRF, Celery, or a vendor SDK.
 | `documents/`        | `Document`/`ParsedDocument` lifecycle, `Evidence`, validation policies  | Implemented (2)|
 | `cv/`               | `CandidateProfile` and its parts (Experience, Education, ...), section detection | Implemented (2)|
 | `job/`              | `JobProfile`, `JobRequirement`                                          | Implemented (2)|
-| `skills/`           | Skill taxonomy, normalization, categories                              | Implemented (2)|
-| `matching/`         | `MatchResult`, matching strategies                                      | Phase 3        |
-| `scoring/`          | Deterministic, explainable ATS score calculation                       | Phase 4        |
-| `recommendations/`  | Recommendation entities and prioritization rules                       | Phase 4        |
-| `tailoring/`        | `TailoredCV` entity, tailoring/validation policies                     | Phase 5        |
+| `skills/`           | Skill taxonomy, normalization, ecosystem/relationship derivation (`relationships.py`), technology-mention scanning (`enrichment.py`) | Implemented (2, enriched 3) |
+| `semantics/`        | `SemanticRepresentation`, `SemanticEntityType`                          | Implemented (3)|
+| `matching/`         | `MatchResult`, matching strategies                                      | Phase 4        |
+| `scoring/`          | Deterministic, explainable ATS score calculation                       | Phase 5        |
+| `recommendations/`  | Recommendation entities and prioritization rules                       | Phase 5        |
+| `tailoring/`        | `TailoredCV` entity, tailoring/validation policies                     | Phase 6        |
+
+Phase 3 also added `cv/seniority.py`, `cv/education_normalization.py`,
+`cv/language_normalization.py`, and `job/requirement_semantics.py` to
+the existing `cv/`/`job/` modules - see
+[docs/architecture/phase-3-semantics.md](../../docs/architecture/phase-3-semantics.md).
 
 ## A Phase 1 plan deviation, documented
 
