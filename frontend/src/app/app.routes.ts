@@ -20,10 +20,24 @@ export const routes: Routes = [
           import('./features/cvs/pages/cv-list/cv-list.component').then((m) => m.CvListComponent),
       },
       {
+        path: 'cvs/:id',
+        loadComponent: () =>
+          import('./features/cvs/pages/cv-detail/cv-detail.component').then(
+            (m) => m.CvDetailComponent,
+          ),
+      },
+      {
         path: 'jobs',
         loadComponent: () =>
           import('./features/jobs/pages/job-list/job-list.component').then(
             (m) => m.JobListComponent,
+          ),
+      },
+      {
+        path: 'jobs/:id',
+        loadComponent: () =>
+          import('./features/jobs/pages/job-detail/job-detail.component').then(
+            (m) => m.JobDetailComponent,
           ),
       },
       {

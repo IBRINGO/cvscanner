@@ -1,0 +1,113 @@
+// CVScanner design tokens.
+//
+// Design read: a career intelligence workspace, not a generic admin
+// dashboard - editorial, precise, data-oriented, human. One accent color
+// (terracotta) used identically everywhere; status colors are a
+// separate, small palette reserved for document processing state and
+// must never be reused to imply skill/requirement compatibility (there
+// is no matching engine yet - see docs/architecture/phase-2-pipeline.md).
+//
+// Shape strategy: mostly-sharp surfaces (radius-sm/md) with radius-pill
+// reserved for small status/skill chips only - see the Shape
+// Consistency Lock note below each variable is used.
+
+:root {
+  // ---- Neutrals (cool slate, not warm cream/beige) ----
+  --surface-base: #f4f5f6;
+  --surface-raised: #ffffff;
+  --surface-sunken: #ebedf0;
+  --border-subtle: #dee1e5;
+  --border-strong: #c3c8cf;
+  --ink-primary: #1a1c20;
+  --ink-secondary: #565b63;
+  --ink-tertiary: #868c94;
+
+  // ---- Accent (terracotta - the ONE accent color, used everywhere) ----
+  --accent: #b8492a;
+  --accent-strong: #963c22;
+  --accent-tint: #f6e6e1;
+
+  // ---- Status (document processing lifecycle only - never used for
+  // skill/requirement compatibility) ----
+  --status-uploaded: #868c94;
+  --status-processing: #b8492a;
+  --status-processed: #2f6b46;
+  --status-processed-tint: #e5f0e8;
+  --status-failed: #a23b2e;
+  --status-failed-tint: #f7e6e3;
+
+  // ---- Radius (Shape Consistency Lock: sharp-ish structural surfaces,
+  // pill reserved for small status/skill chips) ----
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+
+  // ---- Spacing scale ----
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  // ---- Motion (MOTION_INTENSITY: 4 - fluid CSS, no scroll choreography) ----
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 360ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  // ---- Elevation (borders over shadows - "avoid excessive shadows") ----
+  --shadow-overlay: 0 8px 24px rgba(26, 28, 32, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface-base: #17181b;
+    --surface-raised: #1f2124;
+    --surface-sunken: #101113;
+    --border-subtle: #303338;
+    --border-strong: #45484e;
+    --ink-primary: #f1f1f0;
+    --ink-secondary: #b5b8bd;
+    --ink-tertiary: #82868d;
+
+    --accent: #e07152;
+    --accent-strong: #ee8b6f;
+    --accent-tint: #3a221c;
+
+    --status-uploaded: #82868d;
+    --status-processing: #e07152;
+    --status-processed: #6bc48b;
+    --status-processed-tint: #1c2f21;
+    --status-failed: #e0796a;
+    --status-failed-tint: #3a221e;
+
+    --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme='dark'] {
+  --surface-base: #17181b;
+  --surface-raised: #1f2124;
+  --surface-sunken: #101113;
+  --border-subtle: #303338;
+  --border-strong: #45484e;
+  --ink-primary: #f1f1f0;
+  --ink-secondary: #b5b8bd;
+  --ink-tertiary: #82868d;
+
+  --accent: #e07152;
+  --accent-strong: #ee8b6f;
+  --accent-tint: #3a221c;
+
+  --status-uploaded: #82868d;
+  --status-processing: #e07152;
+  --status-processed: #6bc48b;
+  --status-processed-tint: #1c2f21;
+  --status-failed: #e0796a;
+  --status-failed-tint: #3a221e;
+
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
+}

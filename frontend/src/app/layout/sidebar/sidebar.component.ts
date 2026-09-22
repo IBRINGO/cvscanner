@@ -23,7 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   imports: [RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav class="app-sidebar">
+    <nav class="app-sidebar" aria-label="Main">
       @for (item of navItems; track item.path) {
         <a
           [routerLink]="item.path"
@@ -41,21 +41,42 @@ const NAV_ITEMS: NavItem[] = [
         display: flex;
         flex-direction: column;
         width: 220px;
-        padding: 1rem 0.5rem;
-        border-right: 1px solid var(--color-border, #d0d5dd);
+        flex-shrink: 0;
+        padding: var(--space-5) var(--space-3);
+        border-right: 1px solid var(--border-subtle);
+        background: var(--surface-raised);
       }
       .app-sidebar__link {
-        padding: 0.5rem 0.75rem;
-        border-radius: 6px;
-        color: inherit;
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-sm);
+        color: var(--ink-secondary);
         text-decoration: none;
+        font-size: var(--text-sm);
+        transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
       }
       .app-sidebar__link:hover {
-        background: var(--color-muted-bg, #f2f4f7);
+        background: var(--surface-sunken);
+        color: var(--ink-primary);
       }
       .app-sidebar__link--active {
-        background: var(--color-muted-bg, #f2f4f7);
-        font-weight: 600;
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        font-weight: 500;
+      }
+
+      @media (max-width: 767px) {
+        .app-sidebar {
+          width: 100%;
+          min-width: 0;
+          flex-direction: row;
+          overflow-x: auto;
+          border-right: none;
+          border-bottom: 1px solid var(--border-subtle);
+          padding: var(--space-2);
+        }
+        .app-sidebar__link {
+          white-space: nowrap;
+        }
       }
     `,
   ],

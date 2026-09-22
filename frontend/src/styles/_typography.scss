@@ -1,0 +1,68 @@
+// Typography system.
+//
+// Display/headings: Newsreader (serif) - genuinely justified here, not a
+// default reach: CVScanner's brief explicitly calls for an "editorial"
+// register, and a serif display face is how editorial-intelligence
+// products (career docs, structured reading) signal "considered", not
+// "generic SaaS dashboard". Not Fraunces/Instrument Serif (banned as
+// defaults).
+//
+// UI/body: IBM Plex Sans - humanist, technical-but-warm, not Inter.
+// Data/evidence/metadata: IBM Plex Mono - pairs naturally with Plex Sans
+// and gives page numbers, confidence values, and evidence snippets a
+// distinct "this is extracted data" register.
+
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-ui: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.375rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--ink-primary);
+  line-height: 1.55;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--ink-primary);
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--text-2xl);
+}
+h2 {
+  font-size: var(--text-xl);
+}
+h3 {
+  font-size: var(--text-lg);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.text-secondary {
+  color: var(--ink-secondary);
+}
+
+.text-tertiary {
+  color: var(--ink-tertiary);
+}
