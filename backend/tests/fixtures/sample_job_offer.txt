@@ -1,0 +1,26 @@
+Senior Backend Engineer
+Company: Meridian Analytics
+Location: Remote
+Employment Type: Full-time
+Seniority: Senior
+
+SUMMARY
+We are looking for an experienced backend engineer to join our platform team.
+
+RESPONSIBILITIES
+- Design and maintain REST APIs
+- Collaborate with product and design teams
+- Mentor junior engineers
+
+REQUIREMENTS
+Required:
+Python
+Django
+PostgreSQL
+5+ years of experience
+Bachelor degree in Computer Science
+
+Preferred:
+Docker
+Kubernetes
+AWS
