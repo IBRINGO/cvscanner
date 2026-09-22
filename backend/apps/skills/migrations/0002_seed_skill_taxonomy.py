@@ -29,11 +29,9 @@ def seed_taxonomy(apps, schema_editor):
         skill.parent = created.get(entry.parent_skill)
         skill.save(update_fields=["parent"])
 
-    for entry in SEED_SKILLS:
-        for related_name in entry.related_skills:
-            related = created.get(related_name)
-            if related:
-                created[entry.canonical_name].related_skills.add(related)
+    # Ecosystem/description/typed relations are backfilled by the Phase 3
+    # migration (0003_skill_relationships) once those columns/model exist -
+    # this migration only wires up what its own schema (0001) supports.
 
 
 def unseed_taxonomy(apps, schema_editor):
