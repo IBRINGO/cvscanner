@@ -117,3 +117,39 @@ def _resolve_skill(skill) -> DjangoSkill | None:
     if skill is None:
         return None
     return DjangoSkill.objects.filter(canonical_name=skill.canonical_name).first()
+
+
+class DjangoCandidateEnrichmentRepository:
+    """Applies Phase 3 semantic enrichment on top of rows Phase 2 already
+    persisted (see DjangoCandidateProfileRepository.save() above).
+
+    Matches enrichment values to rows by creation order (`ordering =
+    ["id"]` on each model, same order `save()` iterated the domain
+    profile's tuples in) rather than by any business key, because
+    Experience/Education/Language rows have none - this is safe because
+    enrichment always runs immediately after save() in the same pipeline
+    execution, before anything else can touch these rows.
+    """
+
+    @transaction.atomic
+    def apply_experience_enrichment(self, document_id: str, updates: list[dict]) -> None:
+        rows = list(Experience.objects.filter(candidate_profile__document_id=document_id).order_by("id"))
+        for row, update in zip(rows, updates, strict=True):
+            row.seniority = update.get("seniority")
+            row.technologies = update.get("technologies", row.technologies)
+            row.save(update_fields=["seniority", "technologies"])
+
+    @transaction.atomic
+    def apply_education_enrichment(self, document_id: str, updates: list[dict]) -> None:
+        rows = list(Education.objects.filter(candidate_profile__document_id=document_id).order_by("id"))
+        for row, update in zip(rows, updates, strict=True):
+            row.degree_level = update.get("degree_level")
+            row.save(update_fields=["degree_level"])
+
+    @transaction.atomic
+    def apply_language_enrichment(self, document_id: str, updates: list[dict]) -> None:
+        rows = list(Language.objects.filter(candidate_profile__document_id=document_id).order_by("id"))
+        for row, update in zip(rows, updates, strict=True):
+            row.canonical_name = update.get("canonical_name")
+            row.proficiency_normalized = update.get("proficiency_normalized")
+            row.save(update_fields=["canonical_name", "proficiency_normalized"])

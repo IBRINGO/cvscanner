@@ -21,3 +21,11 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+# The test suite must never depend on a live network call or a real API
+# key, even if a developer's local .env happens to define one (base.py
+# reads .env unconditionally) - forcing this empty makes
+# config.container.build_embedding_provider() always fall back to the
+# deterministic FakeEmbeddingProvider during tests. See
+# infrastructure/embeddings/providers/fake_provider.py.
+OPENAI_API_KEY = ""

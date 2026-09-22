@@ -1,6 +1,7 @@
 """Orchestrates the full job-offer processing pipeline. Mirrors
 application/cv/process_pipeline.py - see that module's docstring for the
-idempotency and error-handling rationale, which applies identically here.
+idempotency, error-handling, and Phase 3 enrichment-isolation rationale,
+which applies identically here.
 """
 import logging
 import time
@@ -8,6 +9,7 @@ import time
 from domain.cv.policies import detect_sections
 from domain.documents.enums import ProcessingStatus
 from domain.documents.exceptions import DocumentParsingError, DocumentValidationError
+from domain.semantics.enums import SemanticEntityType
 
 logger = logging.getLogger(__name__)
 
@@ -15,10 +17,21 @@ EXTRACTION_VERSION = "1.0.0"
 
 
 class ProcessJobDocumentPipeline:
-    def __init__(self, document_repository, parse_document, extract_job_profile) -> None:
+    def __init__(
+        self,
+        document_repository,
+        parse_document,
+        extract_job_profile,
+        enrich_job_profile,
+        generate_embeddings,
+        technology_scanner,
+    ) -> None:
         self._repository = document_repository
         self._parse_document = parse_document
         self._extract_job_profile = extract_job_profile
+        self._enrich_job_profile = enrich_job_profile
+        self._generate_embeddings = generate_embeddings
+        self._technology_scanner = technology_scanner
 
     def run(self, document_id: str) -> None:
         document = self._repository.get(document_id)
@@ -41,7 +54,8 @@ class ProcessJobDocumentPipeline:
                 sections=[_section_to_dict(section) for section in sections],
             )
 
-            self._extract_job_profile.execute(document_id, parsed, sections)
+            profile = self._extract_job_profile.execute(document_id, parsed, sections)
+            self._enrich(document_id, profile)
 
             self._repository.update_processing_metadata(document_id, extraction_version=EXTRACTION_VERSION)
             self._repository.update_status(document_id, ProcessingStatus.PROCESSED)
@@ -59,6 +73,25 @@ class ProcessJobDocumentPipeline:
             )
             logger.exception("job.process.unexpected_error document_id=%s", document_id)
             raise
+
+    def _enrich(self, document_id: str, profile) -> None:
+        try:
+            self._enrich_job_profile.execute(document_id, profile, self._technology_scanner)
+        except Exception:
+            logger.exception("job.process.enrichment_failed document_id=%s", document_id)
+
+        try:
+            self._generate_embeddings.execute(
+                SemanticEntityType.JOB_PROFILE, document_id, _embedding_text(profile)
+            )
+        except Exception:
+            logger.exception("job.process.embedding_failed document_id=%s", document_id)
+
+
+def _embedding_text(profile) -> str:
+    parts = [profile.title, profile.summary, *profile.responsibilities]
+    parts.extend(requirement.raw_text for requirement in profile.requirements)
+    return " ".join(part for part in parts if part)
 
 
 def _section_to_dict(section) -> dict:

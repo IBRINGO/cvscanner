@@ -24,6 +24,9 @@ class TestNormalizeProficiency:
         assert normalize_proficiency("B2") == LanguageProficiency.UPPER_INTERMEDIATE
         assert normalize_proficiency("c2") == LanguageProficiency.FLUENT
 
+    def test_maps_conversational_to_intermediate(self):
+        assert normalize_proficiency("Conversational") == LanguageProficiency.INTERMEDIATE
+
     def test_maps_native_aliases(self):
         assert normalize_proficiency("native speaker") == LanguageProficiency.NATIVE
         assert normalize_proficiency("mother tongue") == LanguageProficiency.NATIVE

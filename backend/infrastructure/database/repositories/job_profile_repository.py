@@ -63,3 +63,25 @@ def _resolve_skill(skill) -> DjangoSkill | None:
     if skill is None:
         return None
     return DjangoSkill.objects.filter(canonical_name=skill.canonical_name).first()
+
+
+class DjangoJobEnrichmentRepository:
+    """Applies Phase 3 semantic enrichment on top of rows Phase 2 already
+    persisted - see DjangoCandidateEnrichmentRepository's docstring in
+    candidate_profile_repository.py for why matching by creation order is
+    safe here.
+    """
+
+    @transaction.atomic
+    def apply_seniority(self, document_id: str, seniority_normalized: str | None) -> None:
+        DjangoJobProfile.objects.filter(document_id=document_id).update(
+            seniority_normalized=seniority_normalized
+        )
+
+    @transaction.atomic
+    def apply_requirement_enrichment(self, document_id: str, updates: list[dict]) -> None:
+        rows = list(JobRequirement.objects.filter(job_profile__document_id=document_id).order_by("id"))
+        for row, update in zip(rows, updates, strict=True):
+            row.minimum_years = update.get("minimum_years")
+            row.normalized_value = update.get("normalized_value")
+            row.save(update_fields=["minimum_years", "normalized_value"])

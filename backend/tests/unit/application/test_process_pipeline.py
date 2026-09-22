@@ -6,9 +6,11 @@ import dataclasses
 import pytest
 
 from application.cv.process_pipeline import ProcessCvDocumentPipeline
+from domain.cv.entities import CandidateProfile, Contact
 from domain.documents.entities import DocumentRecord, ParsedDocument
 from domain.documents.enums import DocumentType, ProcessingStatus
 from domain.documents.exceptions import DocumentParsingError
+from domain.skills.enrichment import TechnologyMentionScanner
 
 
 def _record(status=ProcessingStatus.UPLOADED) -> DocumentRecord:
@@ -72,13 +74,46 @@ class FakeExtractCandidateProfile:
 
     def execute(self, document_id, parsed, sections):
         self.called_with = (document_id, parsed, sections)
-        return object()
+        return CandidateProfile(full_name=None, contact=Contact(), summary=None)
+
+
+class FakeEnrichCandidateProfile:
+    def __init__(self, error=None):
+        self.called_with = None
+        self._error = error
+
+    def execute(self, document_id, profile, scanner):
+        if self._error:
+            raise self._error
+        self.called_with = (document_id, profile, scanner)
+
+
+class FakeGenerateEmbeddings:
+    def __init__(self, error=None):
+        self.called_with = None
+        self._error = error
+
+    def execute(self, entity_type, entity_id, text):
+        if self._error:
+            raise self._error
+        self.called_with = (entity_type, entity_id, text)
+
+
+def _build_pipeline(repository, parse_document, extract, enrich=None, embeddings=None):
+    return ProcessCvDocumentPipeline(
+        repository,
+        parse_document,
+        extract,
+        enrich or FakeEnrichCandidateProfile(),
+        embeddings or FakeGenerateEmbeddings(),
+        TechnologyMentionScanner(()),
+    )
 
 
 class TestProcessCvDocumentPipelineSuccess:
     def test_happy_path_transitions_to_processed(self):
         repository = FakeDocumentRepository()
-        pipeline = ProcessCvDocumentPipeline(repository, FakeParseDocument(), FakeExtractCandidateProfile())
+        pipeline = _build_pipeline(repository, FakeParseDocument(), FakeExtractCandidateProfile())
 
         pipeline.run("doc-1")
 
@@ -93,21 +128,32 @@ class TestProcessCvDocumentPipelineSuccess:
     def test_saves_parsed_text_and_sections(self):
         repository = FakeDocumentRepository()
         parsed = ParsedDocument(raw_text="SUMMARY\nSomething\n\nSKILLS\nPython")
-        pipeline = ProcessCvDocumentPipeline(
-            repository, FakeParseDocument(parsed), FakeExtractCandidateProfile()
-        )
+        pipeline = _build_pipeline(repository, FakeParseDocument(parsed), FakeExtractCandidateProfile())
 
         pipeline.run("doc-1")
 
         assert repository.saved_parsed_result["raw_text"] == parsed.raw_text
         assert len(repository.saved_parsed_result["sections"]) >= 1
 
+    def test_enrichment_and_embeddings_run_after_extraction(self):
+        repository = FakeDocumentRepository()
+        enrich = FakeEnrichCandidateProfile()
+        embeddings = FakeGenerateEmbeddings()
+        pipeline = _build_pipeline(
+            repository, FakeParseDocument(), FakeExtractCandidateProfile(), enrich, embeddings
+        )
+
+        pipeline.run("doc-1")
+
+        assert enrich.called_with is not None
+        assert embeddings.called_with is not None
+
 
 class TestProcessCvDocumentPipelineIdempotency:
     def test_already_processed_document_is_skipped(self):
         repository = FakeDocumentRepository(initial_status=ProcessingStatus.PROCESSED)
         extract = FakeExtractCandidateProfile()
-        pipeline = ProcessCvDocumentPipeline(repository, FakeParseDocument(), extract)
+        pipeline = _build_pipeline(repository, FakeParseDocument(), extract)
 
         pipeline.run("doc-1")
 
@@ -118,7 +164,7 @@ class TestProcessCvDocumentPipelineIdempotency:
 class TestProcessCvDocumentPipelineFailure:
     def test_parsing_error_marks_document_failed_without_raising(self):
         repository = FakeDocumentRepository()
-        pipeline = ProcessCvDocumentPipeline(
+        pipeline = _build_pipeline(
             repository,
             FakeParseDocument(error=DocumentParsingError("corrupted file")),
             FakeExtractCandidateProfile(),
@@ -136,7 +182,7 @@ class TestProcessCvDocumentPipelineFailure:
             def execute(self, *args, **kwargs):
                 raise RuntimeError("database connection lost: secret-token-xyz")
 
-        pipeline = ProcessCvDocumentPipeline(repository, BoomParseDocument(), FakeExtractCandidateProfile())
+        pipeline = _build_pipeline(repository, BoomParseDocument(), FakeExtractCandidateProfile())
 
         with pytest.raises(RuntimeError):
             pipeline.run("doc-1")
@@ -145,3 +191,32 @@ class TestProcessCvDocumentPipelineFailure:
         # The safe, generic message is stored - not the raw exception text,
         # which could leak internal details (section 30 of the brief).
         assert "secret-token-xyz" not in repository.failure_reason
+
+
+class TestProcessCvDocumentPipelineEnrichmentIsolation:
+    """Phase 3 sections 62/80: a broken enrichment or embedding step must
+    never turn an otherwise-successful Phase 2 extraction into a FAILED
+    document, and must never raise out of run().
+    """
+
+    def test_enrichment_failure_does_not_fail_the_document(self):
+        repository = FakeDocumentRepository()
+        enrich = FakeEnrichCandidateProfile(error=RuntimeError("enrichment provider exploded"))
+        pipeline = _build_pipeline(
+            repository, FakeParseDocument(), FakeExtractCandidateProfile(), enrich=enrich
+        )
+
+        pipeline.run("doc-1")  # must not raise
+
+        assert repository.record.status == ProcessingStatus.PROCESSED
+
+    def test_embedding_failure_does_not_fail_the_document(self):
+        repository = FakeDocumentRepository()
+        embeddings = FakeGenerateEmbeddings(error=RuntimeError("embedding provider unreachable"))
+        pipeline = _build_pipeline(
+            repository, FakeParseDocument(), FakeExtractCandidateProfile(), embeddings=embeddings
+        )
+
+        pipeline.run("doc-1")  # must not raise
+
+        assert repository.record.status == ProcessingStatus.PROCESSED

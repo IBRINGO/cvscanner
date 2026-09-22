@@ -52,6 +52,7 @@ _PROFICIENCY_ALIASES: dict[str, LanguageProficiency] = {
     "a2": LanguageProficiency.ELEMENTARY,
     "basic": LanguageProficiency.ELEMENTARY,
     "intermediate": LanguageProficiency.INTERMEDIATE,
+    "conversational": LanguageProficiency.INTERMEDIATE,
     "b1": LanguageProficiency.INTERMEDIATE,
     "upper intermediate": LanguageProficiency.UPPER_INTERMEDIATE,
     "b2": LanguageProficiency.UPPER_INTERMEDIATE,

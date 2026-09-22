@@ -24,15 +24,21 @@ class ExtractionMethod(StrEnum):
     """How a specific fact (a skill, a requirement, an experience entry...)
     was derived. See domain/documents/evidence.py for how this is used.
 
-    Phase 2 only produces PARSER/RULE/REGEX facts. MANUAL, LLM, and HYBRID
-    are reserved for later phases (manual correction UI, LLM-assisted
-    extraction) - the enum exists now so evidence records never need a
-    schema change to support them.
+    Phase 2 produced PARSER/RULE/REGEX facts. Phase 3 adds ALIAS (a skill
+    normalization decision - see domain/skills/normalization.py),
+    TAXONOMY (a fact derived by scanning text against the skill taxonomy -
+    see domain/skills/enrichment.py), and EMBEDDING (produced by an
+    EmbeddingProvider - see infrastructure/embeddings/). MANUAL and LLM
+    remain reserved for later phases (manual correction UI, LLM-assisted
+    extraction).
     """
 
     PARSER = "PARSER"
     RULE = "RULE"
     REGEX = "REGEX"
+    ALIAS = "ALIAS"
+    TAXONOMY = "TAXONOMY"
+    EMBEDDING = "EMBEDDING"
     MANUAL = "MANUAL"
     LLM = "LLM"
     HYBRID = "HYBRID"
