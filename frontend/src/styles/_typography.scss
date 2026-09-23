@@ -6,16 +6,19 @@
 // display face would send the wrong signal here. Not Fraunces/Instrument
 // Serif (banned as defaults), and not a serif at all by design.
 //
-// UI/body: IBM Plex Sans - humanist, technical-but-warm, not Inter.
-// Data/evidence/metadata: IBM Plex Mono - pairs naturally with Plex Sans
-// and gives page numbers, confidence values, and evidence snippets a
-// distinct "this is extracted data" register.
+// UI/body/controls: Inter - modern, technical, highly readable at small
+// sizes, the standard product-UI companion to a geometric display face.
+// Data/evidence/metadata: IBM Plex Mono - kept as the one additional
+// family (not a fourth family added on top of a Plex Sans/Inter swap)
+// because it gives page numbers, confidence values, and evidence
+// snippets a distinct "this is extracted data" register that Inter's
+// tabular figures alone don't signal as clearly.
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
   --font-display: 'Space Grotesk', 'Segoe UI', -apple-system, sans-serif;
-  --font-ui: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
 
   --text-xs: 0.75rem;

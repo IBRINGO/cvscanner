@@ -1,29 +1,42 @@
 // CVScanner design tokens.
 //
-// Design read: a document-centric career intelligence workspace built
-// around precision and measurement, not a generic admin dashboard and
-// not an "editorial" reading product. One confident brand accent (a
-// deep signal blue) drives primary actions and active/in-progress
-// states; a small, decoupled semantic palette (positive/attention/
-// negative/inferred) carries evaluation outcomes so the brand color
-// never has to double as a warning color. Documents (CVs, job offers)
-// get their own "paper" surface family, distinct from app chrome, so
-// they read as real documents rather than UI panels.
+// Brand refinement: the palette below is the CVScanner brand system
+// (logo-derived blue/teal/navy family). The token NAMES and the
+// decoupling strategy from the prior pass are kept unchanged - only the
+// literal values changed - so every consuming component picks this up
+// automatically. One confident brand accent (Primary Blue) drives
+// primary actions and active/in-progress states; a small, decoupled
+// semantic palette (positive/attention/negative/inferred) carries
+// evaluation outcomes so the brand color never has to double as a
+// warning color. Documents (CVs, job offers) get their own "paper"
+// surface family, distinct from app chrome, so they read as real
+// documents rather than UI panels.
 //
 // Shape strategy: mostly-sharp surfaces (radius-sm/md/lg) with
 // radius-pill reserved for small status/skill chips only - keep this
 // lock everywhere a new radius value is used.
 
 :root {
-  // ---- Neutrals (cool graphite, not warm cream/beige) ----
-  --surface-base: #eef0f3;
+  // ---- Neutrals (cool slate - the app background is a very light cool
+  // neutral, never pure white; white is reserved for surfaces sitting
+  // on top of it) ----
+  --surface-base: #f6f8fb;
   --surface-raised: #ffffff;
-  --surface-sunken: #e2e5ea;
-  --border-subtle: #d7dbe1;
-  --border-strong: #b7bfca;
-  --ink-primary: #12151a;
-  --ink-secondary: #4b5563;
-  --ink-tertiary: #7c8695;
+  --surface-sunken: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --ink-primary: #0f172a;
+  --ink-secondary: #64748b;
+  --ink-tertiary: #94a3b8;
+
+  // ---- Brand hues beyond the primary accent (logo-derived) - reserved
+  // for selective brand moments, illustrations, gradients and active
+  // states, never the default background ----
+  --brand-navy: #0f172a;
+  --brand-graphite: #1e293b;
+  --brand-teal: #14b8a6;
+  --brand-cyan: #06b6d4;
+  --gradient-brand: linear-gradient(135deg, var(--accent) 0%, var(--brand-teal) 100%);
 
   // ---- Document/paper surfaces (CV and job document previews only -
   // never used for app chrome, so a document always visually reads as
@@ -34,27 +47,28 @@
   --paper-ink-secondary: #5c584f;
   --shadow-document: 0 1px 2px rgba(18, 21, 26, 0.06), 0 12px 28px rgba(18, 21, 26, 0.1);
 
-  // ---- Accent (one brand color - deep signal blue - used identically
-  // for every primary action and for "actively processing" states) ----
-  --accent: #2454e0;
-  --accent-strong: #1b3fb0;
-  --accent-tint: #e4eafc;
+  // ---- Accent (one brand color - CVScanner Primary/Deep Blue - used
+  // identically for every primary action and for "actively processing"
+  // states) ----
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-tint: #e8eefd;
 
   // ---- Semantic outcomes (decoupled from the brand accent on purpose:
   // blue means "primary action" everywhere, so it must never also mean
   // "warning". This is the one system used for match/requirement
   // outcomes AND document processing state, so a color always means
   // the same thing everywhere in the product.) ----
-  --positive: #197a4b;
-  --positive-tint: #e2f3e9;
-  --attention: #b45309;
-  --attention-tint: #faf0e1;
-  --negative: #b3261e;
-  --negative-tint: #f9e6e4;
+  --positive: #16a34a;
+  --positive-tint: #dcfce7;
+  --attention: #d97706;
+  --attention-tint: #fef3c7;
+  --negative: #dc2626;
+  --negative-tint: #fee2e2;
   --neutral: var(--ink-tertiary);
   --neutral-tint: var(--surface-sunken);
-  --inferred: #0e7c86;
-  --inferred-tint: #e1f1f2;
+  --inferred: #0284c7;
+  --inferred-tint: #e0f2fe;
 
   // ---- Document processing lifecycle (maps onto the semantic system
   // above: uploaded = neutral, processing = accent, processed =
@@ -108,19 +122,24 @@
 
   // ---- Elevation (borders over shadows for UI chrome; --shadow-document
   // above is the one deliberate exception, reserved for paper surfaces) ----
-  --shadow-overlay: 0 8px 24px rgba(18, 21, 26, 0.14);
+  --shadow-overlay: 0 8px 24px rgba(15, 23, 42, 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface-base: #14161a;
-    --surface-raised: #1c1f24;
-    --surface-sunken: #0e0f12;
-    --border-subtle: #2c3038;
-    --border-strong: #454b56;
-    --ink-primary: #f1f2f4;
-    --ink-secondary: #b3b9c4;
-    --ink-tertiary: #7e8592;
+    --surface-base: #0b1220;
+    --surface-raised: #131c2e;
+    --surface-sunken: #0a0f1a;
+    --border-subtle: #263349;
+    --border-strong: #3a4a66;
+    --ink-primary: #eef2f8;
+    --ink-secondary: #a9b6cc;
+    --ink-tertiary: #7c8aa3;
+
+    --brand-navy: #0f172a;
+    --brand-graphite: #1e293b;
+    --brand-teal: #2dd4bf;
+    --brand-cyan: #22d3ee;
 
     // Documents stay paper-like even in dark mode - the workspace
     // chrome goes dark, the page itself does not.
@@ -130,20 +149,20 @@
     --paper-ink-secondary: #5c584f;
     --shadow-document: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.45);
 
-    --accent: #6d94ff;
-    --accent-strong: #9db4ff;
-    --accent-tint: #1c2440;
+    --accent: #5b8def;
+    --accent-strong: #8caeff;
+    --accent-tint: #16223d;
 
-    --positive: #4fbf82;
-    --positive-tint: #12281c;
-    --attention: #e0a544;
-    --attention-tint: #332413;
-    --negative: #e2685f;
-    --negative-tint: #351d1b;
+    --positive: #4ade80;
+    --positive-tint: #0f2b1c;
+    --attention: #f0a63a;
+    --attention-tint: #33270f;
+    --negative: #f27166;
+    --negative-tint: #391c19;
     --neutral: var(--ink-tertiary);
     --neutral-tint: var(--surface-sunken);
-    --inferred: #5bc2cc;
-    --inferred-tint: #12292b;
+    --inferred: #38bdf8;
+    --inferred-tint: #0c2536;
 
     --status-uploaded: var(--neutral);
     --status-processing: var(--accent);
@@ -168,14 +187,19 @@
 }
 
 :root[data-theme='dark'] {
-  --surface-base: #14161a;
-  --surface-raised: #1c1f24;
-  --surface-sunken: #0e0f12;
-  --border-subtle: #2c3038;
-  --border-strong: #454b56;
-  --ink-primary: #f1f2f4;
-  --ink-secondary: #b3b9c4;
-  --ink-tertiary: #7e8592;
+  --surface-base: #0b1220;
+  --surface-raised: #131c2e;
+  --surface-sunken: #0a0f1a;
+  --border-subtle: #263349;
+  --border-strong: #3a4a66;
+  --ink-primary: #eef2f8;
+  --ink-secondary: #a9b6cc;
+  --ink-tertiary: #7c8aa3;
+
+  --brand-navy: #0f172a;
+  --brand-graphite: #1e293b;
+  --brand-teal: #2dd4bf;
+  --brand-cyan: #22d3ee;
 
   --paper-surface: #f7f5f1;
   --paper-border: #ddd7c9;
@@ -183,20 +207,20 @@
   --paper-ink-secondary: #5c584f;
   --shadow-document: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.45);
 
-  --accent: #6d94ff;
-  --accent-strong: #9db4ff;
-  --accent-tint: #1c2440;
+  --accent: #5b8def;
+  --accent-strong: #8caeff;
+  --accent-tint: #16223d;
 
-  --positive: #4fbf82;
-  --positive-tint: #12281c;
-  --attention: #e0a544;
-  --attention-tint: #332413;
-  --negative: #e2685f;
-  --negative-tint: #351d1b;
+  --positive: #4ade80;
+  --positive-tint: #0f2b1c;
+  --attention: #f0a63a;
+  --attention-tint: #33270f;
+  --negative: #f27166;
+  --negative-tint: #391c19;
   --neutral: var(--ink-tertiary);
   --neutral-tint: var(--surface-sunken);
-  --inferred: #5bc2cc;
-  --inferred-tint: #12292b;
+  --inferred: #38bdf8;
+  --inferred-tint: #0c2536;
 
   --status-uploaded: var(--neutral);
   --status-processing: var(--accent);
