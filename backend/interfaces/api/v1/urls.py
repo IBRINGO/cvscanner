@@ -12,4 +12,5 @@ urlpatterns = [
     path("jobs/", include("interfaces.api.v1.jobs.urls")),
     path("skills/", include("interfaces.api.v1.skills.urls")),
     path("analyses/", include("interfaces.api.v1.analyses.urls")),
+    path("tailoring/", include("interfaces.api.v1.tailoring.urls")),
 ]

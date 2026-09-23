@@ -168,6 +168,17 @@ OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="text-embedding-3-small")
 
 # ---------------------------------------------------------------------------
+# LLM text generation (Phase 5) - optional, same key pair as embeddings
+# above, reused rather than duplicated. Used only for AGGRESSIVE_SAFE
+# tailoring's bullet rewriting (CONSERVATIVE mode never calls an LLM at
+# all) - see docs/architecture/phase-5-recommendations-and-tailoring.md
+# and infrastructure/llm/. Absence of both keys falls back to
+# FakeLLMProvider, same pattern as the embedding provider chain.
+# ---------------------------------------------------------------------------
+GEMINI_CHAT_MODEL = env("GEMINI_CHAT_MODEL", default="gemini-2.0-flash")
+OPENAI_CHAT_MODEL = env("OPENAI_CHAT_MODEL", default="gpt-4o-mini")
+
+# ---------------------------------------------------------------------------
 # Logging — structured, no print(), never logs secrets or document content.
 # ---------------------------------------------------------------------------
 LOGGING = {
