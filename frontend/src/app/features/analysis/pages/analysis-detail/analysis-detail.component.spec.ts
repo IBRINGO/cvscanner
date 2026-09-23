@@ -80,6 +80,10 @@ describe('AnalysisDetailComponent', () => {
   }
 
   function setup(): void {
+    // Force the score gauge's reduced-motion path so its rendered value
+    // is available synchronously instead of mid-way through a rAF
+    // animation.
+    spyOn(window, 'matchMedia').and.returnValue({ matches: true } as MediaQueryList);
     analysisApiSpy = jasmine.createSpyObj('AnalysisApiService', ['getAnalysis', 'getAnalysisStatus']);
     cvApiSpy = jasmine.createSpyObj('CvApiService', ['getProfile']);
     jobApiSpy = jasmine.createSpyObj('JobApiService', ['getProfile']);
@@ -196,7 +200,7 @@ describe('AnalysisDetailComponent', () => {
   );
 
   it(
-    'never shows a match score or ranking label anywhere on the page',
+    'never renders recommendation content or a candidate ranking - only the journey nav may name that future stage',
     fakeAsync(() => {
       setup();
       analysisApiSpy.getAnalysis.and.returnValues(of(pendingDetail()), of(detail()));
@@ -208,7 +212,12 @@ describe('AnalysisDetailComponent', () => {
       tick();
       fixture.detectChanges();
 
-      const text = (fixture.nativeElement as HTMLElement).textContent?.toLowerCase() ?? '';
+      const root = fixture.nativeElement as HTMLElement;
+      expect(root.querySelector('app-recommendation-list')).toBeNull();
+      expect(root.querySelector('app-recommendation-card')).toBeNull();
+
+      root.querySelector('app-application-progress')?.remove();
+      const text = root.textContent?.toLowerCase() ?? '';
       expect(text).not.toContain('recommend');
       expect(text).not.toContain('ranking');
     }),

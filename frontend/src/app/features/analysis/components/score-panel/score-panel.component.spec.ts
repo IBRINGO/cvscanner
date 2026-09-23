@@ -26,6 +26,9 @@ describe('ScorePanelComponent', () => {
   let fixture: ComponentFixture<ScorePanelComponent>;
 
   function setup(input: Partial<ScorePanelComponent> = {}): void {
+    // Force the gauge's reduced-motion path so its rendered value is
+    // available synchronously instead of mid-way through a rAF animation.
+    spyOn(window, 'matchMedia').and.returnValue({ matches: true } as MediaQueryList);
     TestBed.configureTestingModule({ imports: [ScorePanelComponent] });
     fixture = TestBed.createComponent(ScorePanelComponent);
     fixture.componentInstance.breakdown = input.breakdown ?? breakdown();
@@ -60,8 +63,10 @@ describe('ScorePanelComponent', () => {
     expect(text).not.toContain('missing mandatory requirement');
   });
 
-  it('never renders a circular progress element', () => {
-    setup();
-    expect((fixture.nativeElement as HTMLElement).querySelector('svg circle')).toBeNull();
+  it('renders the score as an animated gauge with the exact real value, not a fabricated one', () => {
+    setup({ breakdown: breakdown({ overall: 0.83 }) });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('app-score-gauge')).toBeTruthy();
+    expect(el.querySelector('.gauge__number')?.textContent?.trim()).toBe('83');
   });
 });

@@ -53,7 +53,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, Input, OnChanges, injec
       }
       .gauge__track {
         fill: none;
-        stroke: var(--surface-sunken);
+        stroke: var(--border-subtle);
         stroke-width: 16;
         stroke-linecap: round;
       }

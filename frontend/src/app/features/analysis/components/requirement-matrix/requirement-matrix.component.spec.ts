@@ -57,6 +57,19 @@ describe('RequirementMatrixComponent', () => {
     expect(detail?.textContent).toContain('Built REST APIs using Django.');
   });
 
+  it('shows a human confidence band derived from the real confidence score, expanded only', () => {
+    setup([evaluation({ confidence: 0.5 })]);
+    const summaryText = (fixture.nativeElement as HTMLElement).querySelector(
+      '.requirement-matrix__summary',
+    )!.textContent;
+    expect(summaryText).not.toContain('Confidence');
+
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.requirement-matrix__summary')!.click();
+    fixture.detectChanges();
+    const detail = (fixture.nativeElement as HTMLElement).querySelector('.requirement-matrix__detail');
+    expect(detail?.textContent).toContain('Confidence: Medium');
+  });
+
   it('shows a fallback message when a requirement has no evidence', () => {
     setup([evaluation({ evidence: [], match_signal: 'NO_EVIDENCE', explanation: 'No evidence found.' })]);
     (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.requirement-matrix__summary')!.click();

@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { ApplicationProgressComponent } from '../../../../shared/components/ui/application-progress/application-progress.component';
 import { pollUntilDone } from '../../../../shared/utils/polling';
 import { CvApiService } from '../../../cvs/services/cv-api.service';
 import { JobApiService } from '../../../jobs/services/job-api.service';
@@ -11,6 +12,7 @@ import { AnalysisProcessingComponent } from '../../components/analysis-processin
 import { GapListComponent } from '../../components/gap-list/gap-list.component';
 import { RequirementMatrixComponent } from '../../components/requirement-matrix/requirement-matrix.component';
 import { ScorePanelComponent } from '../../components/score-panel/score-panel.component';
+import { StrengthListComponent } from '../../components/strength-list/strength-list.component';
 import { AnalysisDetail, AnalysisStatus } from '../../models/analysis.model';
 import { AnalysisApiService } from '../../services/analysis-api.service';
 
@@ -33,11 +35,15 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
     ScorePanelComponent,
     RequirementMatrixComponent,
     GapListComponent,
+    StrengthListComponent,
+    ApplicationProgressComponent,
   ],
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a routerLink="/analysis" class="analysis-detail__back text-secondary">Back to analyses</a>
+
+    <app-application-progress [current]="'analysis'" [completed]="['cv', 'job']" />
 
     @if (candidateName() || jobTitle()) {
       <header class="analysis-detail__context">
@@ -78,10 +84,21 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
           @if (detail(); as analysis) {
             <div class="analysis-detail__workspace">
               <section class="analysis-detail__section">
-                <h2><ng-icon name="lucideTarget" size="18" />Overall analysis</h2>
+                <h2><ng-icon name="lucideTarget" size="18" />ATS compatibility</h2>
                 @if (analysis.score_breakdown) {
                   <app-score-panel [breakdown]="analysis.score_breakdown" [mandatoryGapCount]="mandatoryGapCount()" />
                 }
+              </section>
+
+              <section class="analysis-detail__section analysis-detail__section--split">
+                <div>
+                  <h2><ng-icon name="lucideCircleCheck" size="18" />What is working</h2>
+                  <app-strength-list [evaluations]="analysis.requirement_evaluations" />
+                </div>
+                <div>
+                  <h2><ng-icon name="lucideCircleAlert" size="18" />What needs attention</h2>
+                  <app-gap-list [gaps]="analysis.gaps" />
+                </div>
               </section>
 
               <section class="analysis-detail__section">
@@ -92,11 +109,6 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
                   @if (analysis.requirement_summary.unknown > 0) {, {{ analysis.requirement_summary.unknown }} unknown}
                 </p>
                 <app-requirement-matrix [evaluations]="analysis.requirement_evaluations" />
-              </section>
-
-              <section class="analysis-detail__section">
-                <h2><ng-icon name="lucideCircleAlert" size="18" />Gaps</h2>
-                <app-gap-list [gaps]="analysis.gaps" />
               </section>
 
               <p class="analysis-detail__footer text-tertiary font-mono">
@@ -116,6 +128,10 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
         margin-bottom: var(--space-5);
         font-size: var(--text-sm);
         text-decoration: none;
+      }
+      app-application-progress {
+        display: block;
+        margin-bottom: var(--space-6);
       }
       .analysis-detail__context {
         display: flex;
@@ -153,6 +169,17 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
         align-items: center;
         gap: var(--space-2);
         margin-bottom: var(--space-3);
+      }
+      .analysis-detail__section--split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-7);
+      }
+      @media (max-width: 760px) {
+        .analysis-detail__section--split {
+          grid-template-columns: 1fr;
+          gap: var(--space-6);
+        }
       }
       .analysis-detail__summary {
         margin: 0 0 var(--space-3);

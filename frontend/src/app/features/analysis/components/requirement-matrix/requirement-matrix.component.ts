@@ -58,6 +58,9 @@ const PRIORITY_ICON: Record<string, string> = {
           @if (isExpanded($index)) {
             <div class="requirement-matrix__detail">
               <p class="requirement-matrix__explanation">{{ evaluation.explanation }}</p>
+              <p class="requirement-matrix__confidence text-tertiary font-mono">
+                Confidence: {{ confidenceLabel(evaluation.confidence) }}
+              </p>
               @if (evaluation.evidence.length > 0) {
                 <ul class="requirement-matrix__evidence-list">
                   @for (item of evaluation.evidence; track $index) {
@@ -142,6 +145,10 @@ const PRIORITY_ICON: Record<string, string> = {
         margin: 0;
         color: var(--ink-secondary);
         max-width: 65ch;
+      }
+      .requirement-matrix__confidence {
+        margin: 0;
+        font-size: var(--text-xs);
       }
       .requirement-matrix__evidence-list {
         list-style: none;
@@ -241,6 +248,12 @@ export class RequirementMatrixComponent {
 
   priorityIcon(priority: string): string {
     return PRIORITY_ICON[priority] ?? 'lucideMinus';
+  }
+
+  confidenceLabel(confidence: number): string {
+    if (confidence >= 0.75) return 'High';
+    if (confidence >= 0.4) return 'Medium';
+    return 'Low';
   }
 
   formatEnumLabel(value: string): string {

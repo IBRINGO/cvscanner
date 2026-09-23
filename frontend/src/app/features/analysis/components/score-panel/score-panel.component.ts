@@ -1,26 +1,27 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { ScoreGaugeComponent } from '../../../../shared/components/ui/score-gauge/score-gauge.component';
 import { formatEnumLabel } from '../../../../shared/utils/format-label';
 import { ScoreBreakdown } from '../../models/analysis.model';
 
 /**
- * The overall-score presentation (Phase 4 sections 44-45). Deliberately
- * NOT a circular progress gauge - a large typographic score paired with
- * a plain-language interpretation, then a compact set of horizontal
+ * The overall-score presentation: an animated radial gauge - the
+ * product's core visual claim is "we measured this" - paired with a
+ * plain-language interpretation, then a compact set of horizontal
  * dimension bars using one consistent fill color (never a different
- * color per metric - section 41 bans "random colors for every metric").
+ * color per metric).
  */
 @Component({
   selector: 'app-score-panel',
   standalone: true,
-  imports: [NgIcon],
+  imports: [NgIcon, ScoreGaugeComponent],
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="score-panel">
       <div class="score-panel__headline">
-        <span class="score-panel__number font-mono">{{ percentage() }}</span>
+        <app-score-gauge [score]="breakdown.overall" label="ATS Match" />
         <div class="score-panel__interpretation">
           <p class="score-panel__lead">{{ interpretation() }}</p>
           @if (breakdown.mandatory_gap_penalty > 0) {
@@ -56,21 +57,19 @@ import { ScoreBreakdown } from '../../models/analysis.model';
       }
       .score-panel__headline {
         display: flex;
-        align-items: baseline;
-        gap: var(--space-5);
+        align-items: center;
+        gap: var(--space-7);
         flex-wrap: wrap;
-      }
-      .score-panel__number {
-        font-family: var(--font-display);
-        font-size: 4.5rem;
-        line-height: 1;
-        color: var(--ink-primary);
       }
       .score-panel__interpretation {
         display: flex;
         flex-direction: column;
-        gap: var(--space-1);
+        gap: var(--space-2);
         min-width: 220px;
+        max-width: 40ch;
+      }
+      .score-panel__lead {
+        font-size: var(--text-md);
       }
       .score-panel__lead {
         margin: 0;
