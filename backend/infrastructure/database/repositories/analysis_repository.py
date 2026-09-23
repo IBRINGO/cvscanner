@@ -11,8 +11,17 @@ from django.utils import timezone
 
 from apps.analyses.models import Analysis as DjangoAnalysis
 from apps.analyses.models import RequirementEvaluationRecord
+from domain.documents.enums import ExtractionMethod, SectionType
+from domain.documents.evidence import Evidence
+from domain.job.enums import RequirementType
 from domain.matching.entities import ATSAnalysis, Gap, MatchEvidence, RequirementEvaluation, ScoreBreakdown
-from domain.matching.enums import AnalysisStatus
+from domain.matching.enums import (
+    AnalysisStatus,
+    MatchSignal,
+    MatchStrength,
+    RequirementPriority,
+    RequirementStatus,
+)
 
 
 class DjangoAnalysisRepository:
@@ -28,6 +37,10 @@ class DjangoAnalysisRepository:
     def get_document_pair(self, analysis_id: str) -> tuple[str, str]:
         row = DjangoAnalysis.objects.only("candidate_document_id", "job_document_id").get(id=analysis_id)
         return str(row.candidate_document_id), str(row.job_document_id)
+
+    def get_status(self, analysis_id: str) -> AnalysisStatus:
+        row = DjangoAnalysis.objects.only("status").get(id=analysis_id)
+        return AnalysisStatus(row.status)
 
     def mark_processing(self, analysis_id: str) -> None:
         DjangoAnalysis.objects.filter(id=analysis_id).update(status=AnalysisStatus.PROCESSING.value)
@@ -58,6 +71,22 @@ class DjangoAnalysisRepository:
             error_message=error_message,
             completed_at=timezone.now(),
         )
+
+    def get_requirement_evaluations(self, analysis_id: str) -> tuple[RequirementEvaluation, ...]:
+        """Reconstructs domain RequirementEvaluation objects, in the same
+        order they were persisted (Meta.ordering = ["id"]) - the
+        recommendation engine's `related_requirement_index` (Phase 5
+        section 10) is this tuple's positional index, which
+        application/recommendations/generate_recommendations.py maps
+        back to each row's own database id when persisting
+        Recommendation.related_requirement.
+        """
+        rows = RequirementEvaluationRecord.objects.filter(analysis_id=analysis_id).order_by("id")
+        return tuple(_evaluation_from_row(row) for row in rows)
+
+    def get_requirement_evaluation_ids(self, analysis_id: str) -> tuple[int, ...]:
+        rows = RequirementEvaluationRecord.objects.filter(analysis_id=analysis_id).order_by("id")
+        return tuple(row.id for row in rows)
 
 
 def _create_evaluation_record(row: DjangoAnalysis, evaluation: RequirementEvaluation) -> None:
@@ -100,6 +129,37 @@ def _gap_to_dict(gap: Gap) -> dict:
         "related_candidate_skills": list(gap.related_candidate_skills),
         "confidence": gap.confidence,
     }
+
+
+def _evaluation_from_row(row: RequirementEvaluationRecord) -> RequirementEvaluation:
+    return RequirementEvaluation(
+        requirement_type=RequirementType(row.requirement_type),
+        priority=RequirementPriority(row.priority),
+        raw_text=row.raw_text,
+        status=RequirementStatus(row.status),
+        match_signal=MatchSignal(row.match_signal),
+        match_strength=MatchStrength(row.match_strength),
+        score=row.score,
+        confidence=row.confidence,
+        matched_skill=row.matched_skill,
+        explanation=row.explanation,
+        evidence=tuple(_evidence_from_dict(item) for item in row.evidence),
+    )
+
+
+def _evidence_from_dict(item: dict) -> MatchEvidence:
+    return MatchEvidence(
+        evidence=Evidence(
+            source_document_id="",
+            text=item["text"],
+            extraction_method=ExtractionMethod(item["extraction_method"]),
+            confidence=item["confidence"],
+            page_number=item["page_number"],
+            section=SectionType(item["section"]) if item["section"] else None,
+        ),
+        source_type=item["source_type"],
+        source_label=item["source_label"],
+    )
 
 
 def _breakdown_to_dict(breakdown: ScoreBreakdown) -> dict:

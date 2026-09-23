@@ -1,4 +1,10 @@
-"""Django admin registration for the recommendations app.
+from django.contrib import admin
 
-No models are registered yet — see models.py.
-"""
+from apps.recommendations.models import Recommendation
+
+
+@admin.register(Recommendation)
+class RecommendationAdmin(admin.ModelAdmin):
+    list_display = ("id", "type", "priority", "confidence", "safety", "analysis", "created_at")
+    list_filter = ("type", "priority", "safety")
+    readonly_fields = ("id", "created_at")
