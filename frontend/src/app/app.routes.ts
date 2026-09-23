@@ -55,17 +55,22 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'recommendations',
+        path: 'analysis/:id/recommendations',
         loadComponent: () =>
           import(
             './features/recommendations/pages/recommendations-page/recommendations-page.component'
           ).then((m) => m.RecommendationsPageComponent),
       },
+      // The generic nav entries have no single analysis to show - Phase 5's
+      // recommendations/tailoring are always scoped to one analysis, so the
+      // real entry point is picking one from the analysis workspace.
+      { path: 'recommendations', redirectTo: 'analysis', pathMatch: 'full' },
+      { path: 'tailoring', redirectTo: 'analysis', pathMatch: 'full' },
       {
-        path: 'tailoring',
+        path: 'tailoring/:id',
         loadComponent: () =>
-          import('./features/tailoring/pages/tailoring-config/tailoring-config.component').then(
-            (m) => m.TailoringConfigComponent,
+          import('./features/tailoring/pages/tailoring-detail/tailoring-detail.component').then(
+            (m) => m.TailoringDetailComponent,
           ),
       },
       {
