@@ -32,7 +32,47 @@ import { CvApiService } from '../../services/cv-api.service';
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a [routerLink]="['/cvs', documentId]" class="editor__back text-secondary">Back to CV</a>
+    <div class="editor__topbar">
+      <a [routerLink]="['/cvs', documentId]" class="editor__back text-secondary">Back to CV</a>
+      @if (profile()) {
+        <button type="button" class="editor__export-trigger" (click)="openExport()">
+          <ng-icon name="lucideFileCheck" size="15" />
+          Export
+        </button>
+      }
+    </div>
+
+    @if (showExport()) {
+      <div class="editor__export-overlay" role="dialog" aria-label="Export your CV">
+        <div class="editor__export-card">
+          <h2>Your CV is ready</h2>
+          <dl class="editor__export-facts">
+            <div>
+              <dt>Template</dt>
+              <dd>{{ currentTemplate().name }}</dd>
+            </div>
+            <div>
+              <dt>Length</dt>
+              <dd>~{{ estimatedPages() }} page{{ estimatedPages() === 1 ? '' : 's' }}</dd>
+            </div>
+            <div>
+              <dt>ATS-friendly</dt>
+              <dd><ng-icon name="lucideCircleCheck" size="14" /> Plain text, no images</dd>
+            </div>
+          </dl>
+          <div class="editor__export-actions">
+            <button type="button" class="editor__export-download" (click)="downloadPdf()">
+              <ng-icon name="lucideFileUp" size="15" />
+              Download PDF
+            </button>
+            <button type="button" class="editor__export-cancel" (click)="closeExport()">Continue editing</button>
+          </div>
+          <p class="text-tertiary editor__export-note">
+            DOCX export is not available yet. PDF preserves your selected template exactly.
+          </p>
+        </div>
+      </div>
+    }
 
     @if (loading()) {
       <p class="text-secondary">Loading your CV...</p>
@@ -239,6 +279,9 @@ export class CvEditorComponent implements OnInit {
   readonly canUndo = computed(() => this.past().length > 0);
   readonly canRedo = computed(() => this.future().length > 0);
 
+  readonly showExport = signal(false);
+  readonly estimatedPages = signal(1);
+
   protected readonly currentTemplate = computed<TemplateDefinition>(() => findTemplate(this.templateId()));
   protected readonly selectedRef = computed<CvSectionRef | undefined>(() =>
     this.sectionOrder().find((ref) => ref.id === this.selectedSectionId()),
@@ -375,6 +418,30 @@ export class CvEditorComponent implements OnInit {
     this.past.update((p) => [...p, this.snapshot()]);
     this.future.set(upcoming.slice(1));
     this.restore(next);
+  }
+
+  openExport(): void {
+    const page = document.querySelector<HTMLElement>('.cv-page');
+    // ~1000px of rendered content per printed page at 96dpi, after
+    // typical margins - an estimate, not a guarantee, and labelled as
+    // such in the panel.
+    const pageHeightPx = 1000;
+    this.estimatedPages.set(page ? Math.max(1, Math.ceil(page.scrollHeight / pageHeightPx)) : 1);
+    this.showExport.set(true);
+  }
+
+  closeExport(): void {
+    this.showExport.set(false);
+  }
+
+  downloadPdf(): void {
+    document.body.classList.add('cv-printing');
+    const cleanup = () => {
+      document.body.classList.remove('cv-printing');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
   }
 
   private pushHistory(): void {

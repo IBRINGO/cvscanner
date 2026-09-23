@@ -45,3 +45,29 @@ select {
     scroll-behavior: auto !important;
   }
 }
+
+// CV PDF export: printing the whole SPA (nav, panels, chrome) would be
+// useless, so when the CV editor triggers a print (adding .cv-printing
+// to <body> for the duration of the print call), everything is hidden
+// except the one rendered .cv-page, promoted to fill the printed page -
+// no separate print window, no export library, no backend involvement.
+@media print {
+  body.cv-printing * {
+    visibility: hidden;
+  }
+  body.cv-printing .cv-page,
+  body.cv-printing .cv-page * {
+    visibility: visible;
+  }
+  body.cv-printing .cv-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+}

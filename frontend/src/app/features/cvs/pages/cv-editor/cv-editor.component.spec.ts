@@ -110,6 +110,32 @@ describe('CvEditorComponent', () => {
     expect(component.profile()?.summary).toBe('Changed.');
   });
 
+  it('opens the export panel with a real page estimate and the current template name', () => {
+    setup();
+    component.openExport();
+    fixture.detectChanges();
+    expect(component.showExport()).toBeTrue();
+    expect(component.estimatedPages()).toBeGreaterThanOrEqual(1);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('ATS Classic');
+  });
+
+  it('marks the body for print-only rendering and calls window.print when downloading', () => {
+    setup();
+    spyOn(window, 'print');
+    component.downloadPdf();
+    expect(window.print).toHaveBeenCalled();
+    expect(document.body.classList.contains('cv-printing')).toBeTrue();
+    document.body.classList.remove('cv-printing');
+  });
+
+  it('closes the export panel without leaving print mode on', () => {
+    setup();
+    component.openExport();
+    component.closeExport();
+    expect(component.showExport()).toBeFalse();
+  });
+
   it('adds a custom section and can remove it again', () => {
     setup();
     const before = component.sectionOrder().length;
