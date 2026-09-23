@@ -1,0 +1,284 @@
+// The paper surface every template renders onto. Base layout is
+// shared; each [data-template] variant only changes typography, color
+// accents, and header composition - never structure or data.
+:host {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+
+.cv-page {
+  background: var(--paper-surface);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-document);
+  color: var(--paper-ink);
+  padding: 48px 44px;
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+  margin: 0 auto;
+  font-family: var(--font-ui);
+  line-height: 1.5;
+}
+
+.cv-page__header {
+  margin-bottom: 24px;
+}
+
+.cv-page__name {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--paper-ink);
+  margin: 0;
+}
+
+.cv-page__contact {
+  margin: 4px 0 0;
+  color: var(--paper-ink-secondary);
+  font-size: 0.85rem;
+}
+
+.cv-page__body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cv-page__body--split {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+.cv-page__sidebar {
+  flex: 0 0 34%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cv-page__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cv-section h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--paper-ink-secondary);
+  margin: 0 0 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--paper-border);
+}
+
+.cv-section p {
+  margin: 0;
+}
+
+.cv-entry {
+  margin-bottom: 14px;
+}
+.cv-entry:last-child {
+  margin-bottom: 0;
+}
+.cv-entry--tight {
+  margin-bottom: 6px;
+}
+
+.cv-entry__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cv-entry__title {
+  font-weight: 600;
+}
+
+.cv-entry__dates {
+  font-size: 0.78rem;
+  color: var(--paper-ink-secondary);
+  white-space: nowrap;
+}
+
+.cv-entry__desc {
+  margin: 4px 0 0;
+  color: var(--paper-ink-secondary);
+  font-size: 0.92rem;
+}
+
+.cv-entry__list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--paper-ink-secondary);
+  font-size: 0.92rem;
+}
+
+.cv-page__skill-line {
+  color: var(--paper-ink-secondary);
+  font-size: 0.9rem;
+}
+
+// ---- ATS Classic: plain, sharp, zero decoration ----
+.cv-page[data-template='ats-classic'] {
+  font-family: 'Georgia', 'Times New Roman', serif;
+
+  .cv-page__name {
+    font-family: inherit;
+    font-size: 1.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .cv-section h2 {
+    border-bottom: 1px solid var(--paper-ink);
+    color: var(--paper-ink);
+  }
+}
+
+// ---- ATS Professional: stronger hierarchy, one accent ----
+.cv-page[data-template='ats-professional'] {
+  .cv-page__name {
+    color: var(--accent);
+  }
+  .cv-section h2 {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+}
+
+// ---- Executive: centered, premium, generous whitespace ----
+.cv-page[data-template='executive'] {
+  padding: 56px 56px;
+
+  .cv-page__header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .cv-page__name {
+    font-size: 2.2rem;
+    letter-spacing: 0.02em;
+  }
+  .cv-page__contact {
+    margin-top: 8px;
+  }
+  .cv-page__body {
+    gap: 28px;
+  }
+  .cv-section h2 {
+    text-align: center;
+    border-bottom: none;
+    position: relative;
+  }
+  .cv-section h2::after {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 2px;
+    background: var(--accent);
+    margin: 6px auto 0;
+  }
+}
+
+// ---- Modern Split: two columns, tinted sidebar ----
+.cv-page[data-template='modern-split'] {
+  padding: 0;
+  overflow: hidden;
+
+  .cv-page__header {
+    padding: 36px 40px 20px;
+    margin-bottom: 0;
+  }
+  .cv-page__body--split {
+    gap: 0;
+    align-items: stretch;
+  }
+  .cv-page__sidebar {
+    background: var(--accent-tint);
+    padding: 24px 28px 40px;
+  }
+  .cv-page__main {
+    padding: 24px 40px 40px;
+  }
+  .cv-section h2 {
+    color: var(--accent-strong);
+  }
+}
+
+// ---- Technical: monospace accents, engineering register ----
+.cv-page[data-template='technical'] {
+  .cv-page__name {
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+  .cv-page__sidebar {
+    border-right: 1px solid var(--paper-border);
+    padding-right: 24px;
+  }
+  .cv-section h2 {
+    font-family: var(--font-mono);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .cv-section h2::before {
+    content: '// ';
+    color: var(--inferred);
+  }
+  .cv-entry__dates {
+    font-family: var(--font-mono);
+  }
+  .cv-page__skill-line {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+}
+
+// ---- Minimal: quiet, no rules, no color ----
+.cv-page[data-template='minimal'] {
+  .cv-page__name {
+    font-family: var(--font-ui);
+    font-weight: 500;
+    font-size: 1.7rem;
+  }
+  .cv-section h2 {
+    border-bottom: none;
+    font-weight: 500;
+    color: var(--paper-ink-secondary);
+  }
+}
+
+@media (max-width: 720px) {
+  .cv-page {
+    padding: 28px 24px;
+  }
+  .cv-page[data-template='executive'] {
+    padding: 32px 24px;
+  }
+  .cv-page__body--split {
+    flex-direction: column;
+  }
+  .cv-page[data-template='modern-split'] {
+    .cv-page__sidebar,
+    .cv-page__main {
+      padding: 20px 24px;
+    }
+  }
+  .cv-page[data-template='technical'] .cv-page__sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--paper-border);
+    padding-right: 0;
+    padding-bottom: 16px;
+  }
+}
+
+// Screen-only surface (elevation, rounding) - print gets its own rules
+// in the export print stylesheet (Phase 9), which strips all of this
+// back to plain paper.

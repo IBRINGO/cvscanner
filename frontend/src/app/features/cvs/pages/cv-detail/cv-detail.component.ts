@@ -31,6 +31,7 @@ const TERMINAL_STATUSES = new Set(['PROCESSED', 'FAILED']);
           <p class="text-secondary">{{ current.error ?? 'An unexpected error occurred.' }}</p>
         </section>
       } @else if (profile()) {
+        <a [routerLink]="['/cvs', documentId, 'editor']" class="cv-detail__editor-link">Open in CV editor</a>
         <app-candidate-profile-view [profile]="profile()!" />
       }
     }
@@ -38,7 +39,7 @@ const TERMINAL_STATUSES = new Set(['PROCESSED', 'FAILED']);
   styles: [
     `
       .cv-detail__back {
-        display: inline-block;
+        display: block;
         margin-bottom: var(--space-5);
         font-size: var(--text-sm);
         text-decoration: none;
@@ -50,12 +51,21 @@ const TERMINAL_STATUSES = new Set(['PROCESSED', 'FAILED']);
         gap: var(--space-4);
         max-width: 560px;
       }
+      .cv-detail__editor-link {
+        display: inline-block;
+        margin-bottom: var(--space-5);
+        font-size: var(--text-sm);
+        font-weight: 600;
+        color: var(--accent);
+        text-decoration: none;
+      }
     `,
   ],
 })
 export class CvDetailComponent implements OnInit {
   protected readonly status = signal<DocumentStatusResponse | null>(null);
   protected readonly profile = signal<CandidateProfile | null>(null);
+  protected documentId = '';
 
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -65,6 +75,7 @@ export class CvDetailComponent implements OnInit {
   ngOnInit(): void {
     const documentId = this.route.snapshot.paramMap.get('id');
     if (!documentId) return;
+    this.documentId = documentId;
 
     pollUntilDone(
       () => this.cvApi.getStatus(documentId),
