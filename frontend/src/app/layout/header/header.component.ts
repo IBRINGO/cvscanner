@@ -6,9 +6,10 @@ import { isLoading } from '../../core/http/loading.interceptor';
 import { SidebarStateService } from '../sidebar/sidebar-state.service';
 
 /**
- * The brand mark is a logo-derived lockup (gradient badge + wordmark),
- * not an uploaded image asset - see docs/architecture/phase-6-frontend-redesign.md
- * for why. It anchors the brand identity everywhere the header appears.
+ * The brand mark is the real CVScanner logo artwork (cropped to just the
+ * icon glyph - see docs/images/logo/cvscanner-logo.png for the full
+ * lockup), not a synthetic gradient badge. It anchors the brand identity
+ * everywhere the header appears.
  */
 @Component({
   selector: 'app-header',
@@ -28,8 +29,8 @@ import { SidebarStateService } from '../sidebar/sidebar-state.service';
           <ng-icon name="lucideMenu" size="20" />
         </button>
         <a routerLink="/workspace" class="app-header__brand">
-          <span class="app-header__mark" aria-hidden="true">
-            <ng-icon name="lucideScanSearch" size="16" />
+          <span class="app-header__mark">
+            <img src="/images/cvscanner-icon.png" alt="" />
           </span>
           CVScanner
         </a>
@@ -88,12 +89,17 @@ import { SidebarStateService } from '../sidebar/sidebar-state.service';
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 28px;
-        height: 28px;
-        border-radius: var(--radius-md);
-        background: var(--gradient-brand);
-        color: #fff;
+        width: 32px;
+        height: 32px;
+        padding: 3px;
+        border-radius: var(--radius-sm);
+        background: #fff;
         flex-shrink: 0;
+      }
+      .app-header__mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
       }
       .app-header__status {
         font-size: var(--text-sm);

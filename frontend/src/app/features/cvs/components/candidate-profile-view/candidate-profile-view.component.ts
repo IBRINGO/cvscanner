@@ -27,27 +27,32 @@ interface SkillGroup {
   template: `
     <article class="profile">
       <header class="profile__masthead">
-        <h1>{{ profile.full_name ?? 'Unnamed candidate' }}</h1>
-        <p class="profile__contact text-secondary">
-          @for (item of contactItems(); track item; let last = $last) {
-            <span>{{ item }}</span>
-            @if (!last) {
-              <span class="profile__divider" aria-hidden="true">|</span>
+        <span class="profile__avatar" aria-hidden="true">
+          <ng-icon name="lucideUserRound" size="24" />
+        </span>
+        <div>
+          <h1>{{ profile.full_name ?? 'Unnamed candidate' }}</h1>
+          <p class="profile__contact text-secondary">
+            @for (item of contactItems(); track item; let last = $last) {
+              <span>{{ item }}</span>
+              @if (!last) {
+                <span class="profile__divider" aria-hidden="true">|</span>
+              }
             }
-          }
-        </p>
+          </p>
+        </div>
       </header>
 
       @if (profile.summary) {
         <section class="profile__section">
-          <h2><ng-icon name="lucideFileText" size="18" />Summary</h2>
+          <h2><span class="profile__section-icon"><ng-icon name="lucideFileText" size="16" /></span>Summary</h2>
           <p>{{ profile.summary }}</p>
         </section>
       }
 
       @if (profile.experiences.length > 0) {
         <section class="profile__section">
-          <h2><ng-icon name="lucideBriefcase" size="18" />Experience</h2>
+          <h2><span class="profile__section-icon"><ng-icon name="lucideBriefcase" size="16" /></span>Experience</h2>
           <ul class="profile__timeline">
             @for (experience of profile.experiences; track $index) {
               <li class="profile__entry">
@@ -95,7 +100,7 @@ interface SkillGroup {
 
       @if (profile.education.length > 0) {
         <section class="profile__section">
-          <h2><ng-icon name="lucideGraduationCap" size="18" />Education</h2>
+          <h2><span class="profile__section-icon"><ng-icon name="lucideGraduationCap" size="16" /></span>Education</h2>
           <ul class="profile__timeline">
             @for (entry of profile.education; track $index) {
               <li class="profile__entry">
@@ -126,7 +131,7 @@ interface SkillGroup {
 
       @if (profile.skills.length > 0) {
         <section class="profile__section">
-          <h2><ng-icon name="lucideCode" size="18" />Skills</h2>
+          <h2><span class="profile__section-icon"><ng-icon name="lucideCode" size="16" /></span>Skills</h2>
           <div class="profile__skill-clusters">
             @for (group of skillGroups(); track group.category) {
               <div class="profile__skill-group">
@@ -148,7 +153,7 @@ interface SkillGroup {
 
       @if (profile.projects.length > 0) {
         <section class="profile__section">
-          <h2><ng-icon name="lucideFolder" size="18" />Projects</h2>
+          <h2><span class="profile__section-icon"><ng-icon name="lucideFolder" size="16" /></span>Projects</h2>
           <ul class="profile__timeline">
             @for (project of profile.projects; track project.name) {
               <li class="profile__entry">
@@ -171,7 +176,7 @@ interface SkillGroup {
 
       @if (profile.certifications.length > 0) {
         <section class="profile__section">
-          <h2><ng-icon name="lucideAward" size="18" />Certifications</h2>
+          <h2><span class="profile__section-icon"><ng-icon name="lucideAward" size="16" /></span>Certifications</h2>
           <ul class="profile__timeline">
             @for (cert of profile.certifications; track cert.name) {
               <li class="profile__entry">
@@ -190,7 +195,7 @@ interface SkillGroup {
 
       @if (profile.languages.length > 0) {
         <section class="profile__section">
-          <h2><ng-icon name="lucideLanguages" size="18" />Languages</h2>
+          <h2><span class="profile__section-icon"><ng-icon name="lucideLanguages" size="16" /></span>Languages</h2>
           <div class="profile__language-list">
             @for (language of profile.languages; track language.name) {
               <div class="profile__language">
@@ -214,10 +219,29 @@ interface SkillGroup {
         display: flex;
         flex-direction: column;
         gap: var(--space-6);
+        padding: var(--space-7);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
       }
       .profile__masthead {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
         border-bottom: 1px solid var(--border-subtle);
-        padding-bottom: var(--space-4);
+        padding-bottom: var(--space-5);
+      }
+      .profile__avatar {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-pill);
+        background: var(--gradient-brand);
+        color: #fff;
       }
       .profile__contact {
         margin-top: var(--space-2);
@@ -228,11 +252,42 @@ interface SkillGroup {
       .profile__divider {
         color: var(--border-strong);
       }
+      .profile__section {
+        animation: profile-section-in var(--motion-slow) var(--motion-ease) both;
+      }
       .profile__section h2 {
         margin-bottom: var(--space-3);
         display: flex;
         align-items: center;
         gap: var(--space-2);
+      }
+      .profile__section-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        flex-shrink: 0;
+      }
+
+      @keyframes profile-section-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .profile__section {
+          animation: none;
+        }
       }
       .profile__language-list {
         display: flex;
@@ -253,11 +308,23 @@ interface SkillGroup {
         gap: var(--space-4);
       }
       .profile__entry {
+        position: relative;
         padding-left: var(--space-4);
         border-left: 2px solid var(--border-subtle);
         display: flex;
         flex-direction: column;
         gap: var(--space-2);
+      }
+      .profile__entry::before {
+        content: '';
+        position: absolute;
+        left: -5px;
+        top: 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 2px solid var(--surface-raised);
       }
       .profile__entry-head {
         display: flex;

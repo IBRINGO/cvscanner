@@ -5,6 +5,7 @@
  * `NgIcon` - no per-component icon registration, no mixed families.
  */
 import {
+  lucideArrowLeft,
   lucideArrowUpRight,
   lucideAward,
   lucideBriefcase,
@@ -63,6 +64,7 @@ import {
 } from '@ng-icons/lucide';
 
 export const CVSCANNER_ICONS = {
+  lucideArrowLeft,
   lucideArrowUpRight,
   lucideAward,
   lucideBriefcase,

@@ -21,37 +21,45 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
   template: `
     <article class="job-profile">
       <header class="job-profile__masthead">
-        <h1>{{ profile.title ?? 'Untitled role' }}</h1>
-        <p class="text-secondary job-profile__identity">
-          @if (profile.company) {
-            <span><ng-icon name="lucideBuilding2" size="15" />{{ profile.company }}</span>
-          }
-          @if (profile.location) {
-            <span><ng-icon name="lucideMapPin" size="15" />{{ profile.location }}</span>
-          }
-        </p>
-        <p class="job-profile__tags">
-          @if (profile.seniority_normalized && profile.seniority_normalized !== 'UNKNOWN') {
-            <app-entity-tag [label]="formatEnumLabel(profile.seniority_normalized)" icon="lucideLayers" />
-          } @else if (profile.seniority) {
-            <span class="job-profile__tag">{{ profile.seniority }}</span>
-          }
-          @if (profile.employment_type) {
-            <span class="job-profile__tag">{{ profile.employment_type }}</span>
-          }
-        </p>
+        <span class="job-profile__avatar" aria-hidden="true">
+          <ng-icon name="lucideBriefcase" size="24" />
+        </span>
+        <div>
+          <h1>{{ profile.title ?? 'Untitled role' }}</h1>
+          <p class="text-secondary job-profile__identity">
+            @if (profile.company) {
+              <span><ng-icon name="lucideBuilding2" size="15" />{{ profile.company }}</span>
+            }
+            @if (profile.location) {
+              <span><ng-icon name="lucideMapPin" size="15" />{{ profile.location }}</span>
+            }
+          </p>
+          <p class="job-profile__tags">
+            @if (profile.seniority_normalized && profile.seniority_normalized !== 'UNKNOWN') {
+              <app-entity-tag [label]="formatEnumLabel(profile.seniority_normalized)" icon="lucideLayers" />
+            } @else if (profile.seniority) {
+              <span class="job-profile__tag">{{ profile.seniority }}</span>
+            }
+            @if (profile.employment_type) {
+              <span class="job-profile__tag">{{ profile.employment_type }}</span>
+            }
+          </p>
+        </div>
       </header>
 
       @if (profile.summary) {
         <section class="job-profile__section">
-          <h2><ng-icon name="lucideFileText" size="18" />Summary</h2>
+          <h2><span class="job-profile__section-icon"><ng-icon name="lucideFileText" size="16" /></span>Summary</h2>
           <p>{{ profile.summary }}</p>
         </section>
       }
 
       @if (profile.responsibilities.length > 0) {
         <section class="job-profile__section">
-          <h2><ng-icon name="lucideListChecks" size="18" />Responsibilities</h2>
+          <h2>
+            <span class="job-profile__section-icon"><ng-icon name="lucideListChecks" size="16" /></span
+            >Responsibilities
+          </h2>
           <ul class="job-profile__list">
             @for (item of profile.responsibilities; track item) {
               <li>{{ item }}</li>
@@ -62,11 +70,12 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
 
       @if (requiredRequirements().length > 0) {
         <section class="job-profile__section">
-          <h2><ng-icon name="lucideTarget" size="18" />Required</h2>
+          <h2><span class="job-profile__section-icon"><ng-icon name="lucideTarget" size="16" /></span>Required</h2>
           <ul class="job-profile__requirements">
             @for (requirement of requiredRequirements(); track $index) {
               <li>
                 <span class="job-profile__requirement job-profile__requirement--required">
+                  <ng-icon name="lucideCircleCheck" size="13" />
                   {{ requirement.skill?.canonical_name ?? requirement.raw_text }}
                 </span>
                 @if (requirementDetail(requirement); as detail) {
@@ -83,7 +92,7 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
 
       @if (preferredRequirements().length > 0) {
         <section class="job-profile__section">
-          <h2><ng-icon name="lucideTarget" size="18" />Preferred</h2>
+          <h2><span class="job-profile__section-icon"><ng-icon name="lucideTarget" size="16" /></span>Preferred</h2>
           <ul class="job-profile__requirements">
             @for (requirement of preferredRequirements(); track $index) {
               <li>
@@ -110,18 +119,35 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
         display: flex;
         flex-direction: column;
         gap: var(--space-6);
+        padding: var(--space-7);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
       }
       .job-profile__masthead {
-        border-bottom: 1px solid var(--border-subtle);
-        padding-bottom: var(--space-4);
         display: flex;
-        flex-direction: column;
-        gap: var(--space-2);
+        align-items: center;
+        gap: var(--space-4);
+        border-bottom: 1px solid var(--border-subtle);
+        padding-bottom: var(--space-5);
+      }
+      .job-profile__avatar {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: var(--radius-md);
+        background: var(--surface-sunken);
+        color: var(--ink-secondary);
       }
       .job-profile__identity {
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-4);
+        margin-top: 2px;
       }
       .job-profile__identity span {
         display: inline-flex;
@@ -131,6 +157,7 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
       .job-profile__tags {
         display: flex;
         gap: var(--space-2);
+        margin-top: var(--space-2);
       }
       .job-profile__tag {
         font-size: var(--text-xs);
@@ -141,11 +168,42 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
         border-radius: var(--radius-sm);
         padding: 2px var(--space-2);
       }
+      .job-profile__section {
+        animation: job-profile-section-in var(--motion-slow) var(--motion-ease) both;
+      }
       .job-profile__section h2 {
         margin-bottom: var(--space-3);
         display: flex;
         align-items: center;
         gap: var(--space-2);
+      }
+      .job-profile__section-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        flex-shrink: 0;
+      }
+
+      @keyframes job-profile-section-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .job-profile__section {
+          animation: none;
+        }
       }
       .job-profile__list {
         padding-left: var(--space-5);
@@ -163,7 +221,9 @@ import { JobProfile, JobRequirement } from '../../models/job-profile.model';
         gap: var(--space-3);
       }
       .job-profile__requirement {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
         padding: var(--space-1) var(--space-3);
         border-radius: var(--radius-sm);
         font-size: var(--text-sm);

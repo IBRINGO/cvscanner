@@ -2,6 +2,8 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { CVSCANNER_ICONS } from '../../../../core/icons';
 import { StatusBadgeComponent } from '../../../../shared/components/ui/status-badge/status-badge.component';
 import { UploadDropzoneComponent } from '../../../../shared/components/ui/upload-dropzone/upload-dropzone.component';
 import { DocumentSummary } from '../../../../shared/models/document.model';
@@ -12,7 +14,8 @@ type InputMode = 'text' | 'file';
 @Component({
   selector: 'app-job-list-page',
   standalone: true,
-  imports: [UploadDropzoneComponent, StatusBadgeComponent, RouterLink, DatePipe, FormsModule],
+  imports: [UploadDropzoneComponent, StatusBadgeComponent, RouterLink, DatePipe, FormsModule, NgIcon],
+  viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="job-workspace">
@@ -31,6 +34,7 @@ type InputMode = 'text' | 'file';
             [attr.data-active]="mode() === 'text'"
             (click)="mode.set('text')"
           >
+            <ng-icon name="lucideFileText" size="15" />
             Paste text
           </button>
           <button
@@ -40,6 +44,7 @@ type InputMode = 'text' | 'file';
             [attr.data-active]="mode() === 'file'"
             (click)="mode.set('file')"
           >
+            <ng-icon name="lucideFileUp" size="15" />
             Upload file
           </button>
         </div>
@@ -59,6 +64,7 @@ type InputMode = 'text' | 'file';
             [disabled]="!jobText.trim() || submitting()"
             (click)="submitText()"
           >
+            <ng-icon name="lucideSparkles" size="15" />
             Structure this offer
           </button>
         } @else {
@@ -82,13 +88,18 @@ type InputMode = 'text' | 'file';
           <p class="text-secondary">Nothing added yet. Your job offers will appear here.</p>
         } @else {
           <ul class="document-index">
-            @for (document of documents(); track document.id) {
-              <li class="document-index__row">
+            @for (document of documents(); track document.id; let i = $index) {
+              <li class="document-index__row" [style.animation-delay.ms]="i * 40">
                 <a [routerLink]="['/jobs', document.id]" class="document-index__link">
-                  <span class="document-index__name">{{ document.original_filename }}</span>
-                  <span class="document-index__meta text-tertiary font-mono">{{
-                    document.created_at | date: 'mediumDate'
-                  }}</span>
+                  <span class="document-index__icon">
+                    <ng-icon name="lucideBriefcase" size="16" />
+                  </span>
+                  <span class="document-index__text">
+                    <span class="document-index__name">{{ document.original_filename }}</span>
+                    <span class="document-index__meta text-tertiary font-mono">{{
+                      document.created_at | date: 'mediumDate'
+                    }}</span>
+                  </span>
                 </a>
                 <app-status-badge [status]="document.status" />
               </li>
@@ -110,6 +121,13 @@ type InputMode = 'text' | 'file';
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
+        padding: var(--space-5);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        position: sticky;
+        top: var(--space-6);
       }
       .job-workspace__toggle {
         display: inline-flex;
@@ -120,6 +138,9 @@ type InputMode = 'text' | 'file';
         width: fit-content;
       }
       .job-workspace__toggle button {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
         border: none;
         background: transparent;
         padding: var(--space-2) var(--space-4);
@@ -127,11 +148,15 @@ type InputMode = 'text' | 'file';
         font-size: var(--text-sm);
         cursor: pointer;
         color: var(--ink-secondary);
+        transition:
+          background var(--motion-fast) var(--motion-ease),
+          color var(--motion-fast) var(--motion-ease);
       }
       .job-workspace__toggle button[data-active='true'] {
         background: var(--surface-raised);
-        color: var(--ink-primary);
-        font-weight: 500;
+        color: var(--accent-strong);
+        font-weight: 600;
+        box-shadow: var(--shadow-document);
       }
       .job-workspace__field {
         display: flex;
@@ -147,12 +172,16 @@ type InputMode = 'text' | 'file';
         background: var(--surface-raised);
         color: var(--ink-primary);
         resize: vertical;
+        transition: border-color var(--motion-fast) var(--motion-ease);
       }
       .job-workspace__field textarea:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 1px;
       }
       .job-workspace__submit {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
         align-self: flex-start;
         border: none;
         background: var(--accent);
@@ -162,6 +191,13 @@ type InputMode = 'text' | 'file';
         font-size: var(--text-sm);
         font-weight: 500;
         cursor: pointer;
+        transition:
+          background var(--motion-fast) var(--motion-ease),
+          transform var(--motion-fast) var(--motion-ease);
+      }
+      .job-workspace__submit:not(:disabled):hover {
+        background: var(--accent-strong);
+        transform: translateY(-1px);
       }
       .job-workspace__submit:disabled {
         background: var(--border-strong);
@@ -171,28 +207,71 @@ type InputMode = 'text' | 'file';
         color: var(--accent);
         font-size: var(--text-sm);
       }
+
+      .job-workspace__list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        padding: var(--space-5);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        max-height: calc(100vh - 160px);
+      }
       .job-workspace__list h2 {
-        margin-bottom: var(--space-4);
+        flex-shrink: 0;
       }
       .document-index {
         list-style: none;
         margin: 0;
         padding: 0;
         border-top: 1px solid var(--border-subtle);
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
       }
       .document-index__row {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: var(--space-3);
-        padding: var(--space-3) 0;
+        padding: var(--space-3) var(--space-2);
+        margin: 0 calc(var(--space-2) * -1);
         border-bottom: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        animation: document-row-in var(--motion-slow) var(--motion-ease) both;
+        transition: background var(--motion-fast) var(--motion-ease);
+      }
+      .document-index__row:hover {
+        background: var(--surface-sunken);
       }
       .document-index__link {
         display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        text-decoration: none;
+        min-width: 0;
+      }
+      .document-index__icon {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: var(--surface-sunken);
+        color: var(--ink-secondary);
+        transition: transform var(--motion-base) var(--motion-spring);
+      }
+      .document-index__row:hover .document-index__icon {
+        transform: scale(1.08);
+      }
+      .document-index__text {
+        display: flex;
         flex-direction: column;
         gap: 2px;
-        text-decoration: none;
         min-width: 0;
       }
       .document-index__name {
@@ -206,9 +285,36 @@ type InputMode = 'text' | 'file';
         font-size: var(--text-xs);
       }
 
+      @keyframes document-row-in {
+        from {
+          opacity: 0;
+          transform: translateX(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .document-index__row {
+          animation: none;
+        }
+        .document-index__icon,
+        .job-workspace__submit {
+          transition: none;
+        }
+      }
+
       @media (max-width: 900px) {
         .job-workspace {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .job-workspace__upload {
+          position: static;
+        }
+        .job-workspace__list {
+          max-height: 480px;
         }
       }
     `,
