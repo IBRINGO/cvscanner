@@ -59,6 +59,10 @@ describe('TailoringDetailComponent', () => {
   }
 
   function setup(): void {
+    // Force the score gauge's reduced-motion path so its rendered value
+    // is available synchronously instead of mid-way through a rAF
+    // animation.
+    spyOn(window, 'matchMedia').and.returnValue({ matches: true } as MediaQueryList);
     tailoringApiSpy = jasmine.createSpyObj('TailoringApiService', ['getPlan', 'getStatus']);
     TestBed.configureTestingModule({
       imports: [TailoringDetailComponent],

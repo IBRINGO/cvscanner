@@ -47,7 +47,7 @@ import { DiffSegment, TailoringChange } from '../../models/tailoring.model';
       }
 
       @if (!change.accepted && change.rejection_reasons.length > 0) {
-        <p class="tailoring-diff__rejection text-tertiary">
+        <p class="tailoring-diff__rejection">
           <ng-icon name="lucideTriangleAlert" size="14" />
           The generated wording could not be verified against your CV
           ({{ formatReasons() }}) and was rejected automatically.
@@ -61,8 +61,13 @@ import { DiffSegment, TailoringChange } from '../../models/tailoring.model';
         display: flex;
         flex-direction: column;
         gap: var(--space-2);
-        padding: var(--space-4) 0;
-        border-bottom: 1px solid var(--border-subtle);
+        padding: var(--space-4) var(--space-5);
+        margin-bottom: var(--space-3);
+        background: var(--paper-surface);
+        border: 1px solid var(--paper-border);
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-document);
+        color: var(--paper-ink);
       }
       .tailoring-diff__header {
         display: flex;
@@ -93,7 +98,7 @@ import { DiffSegment, TailoringChange } from '../../models/tailoring.model';
         line-height: 1.6;
       }
       .tailoring-diff__text--unchanged {
-        color: var(--ink-secondary);
+        color: var(--paper-ink-secondary);
       }
       .tailoring-diff__text span[data-change='ADDED'] {
         background: var(--match-positive-tint);
@@ -102,7 +107,7 @@ import { DiffSegment, TailoringChange } from '../../models/tailoring.model';
         padding: 0 2px;
       }
       .tailoring-diff__text span[data-change='REMOVED'] {
-        color: var(--ink-tertiary);
+        color: var(--paper-ink-secondary);
         text-decoration: line-through;
       }
       .tailoring-diff__rejection {
@@ -112,6 +117,7 @@ import { DiffSegment, TailoringChange } from '../../models/tailoring.model';
         margin: 0;
         font-size: var(--text-sm);
         max-width: 65ch;
+        color: var(--paper-ink-secondary);
       }
     `,
   ],

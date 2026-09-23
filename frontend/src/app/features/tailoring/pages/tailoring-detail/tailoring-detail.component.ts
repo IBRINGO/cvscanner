@@ -4,6 +4,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { ApplicationProgressComponent } from '../../../../shared/components/ui/application-progress/application-progress.component';
+import { ScoreGaugeComponent } from '../../../../shared/components/ui/score-gauge/score-gauge.component';
 import { pollUntilDone } from '../../../../shared/utils/polling';
 import { TailoringDiffComponent } from '../../components/tailoring-diff/tailoring-diff.component';
 import { TailoringPlanDetail, TailoringStatus } from '../../models/tailoring.model';
@@ -31,7 +33,7 @@ const STAGE_LABELS: Record<TailoringStatus, string> = {
 @Component({
   selector: 'app-tailoring-detail-page',
   standalone: true,
-  imports: [RouterLink, DatePipe, NgIcon, TailoringDiffComponent],
+  imports: [RouterLink, DatePipe, NgIcon, TailoringDiffComponent, ScoreGaugeComponent, ApplicationProgressComponent],
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -40,6 +42,11 @@ const STAGE_LABELS: Record<TailoringStatus, string> = {
         Back to recommendations
       </a>
     }
+
+    <app-application-progress
+      [current]="isDone() && status() === 'COMPLETED' ? 'export' : 'tailoring'"
+      [completed]="['cv', 'job', 'analysis', 'recommendations']"
+    />
 
     <h1>Tailored CV</h1>
 
@@ -64,15 +71,17 @@ const STAGE_LABELS: Record<TailoringStatus, string> = {
           <section class="tailoring-detail__section">
             <h2><ng-icon name="lucideTarget" size="18" />Alignment before and after</h2>
             <div class="tailoring-detail__scores">
-              <div class="tailoring-detail__score">
-                <span class="text-tertiary">Before</span>
-                <span class="tailoring-detail__score-value">{{ round(detail.before_score) }}</span>
-              </div>
-              <ng-icon name="lucideArrowUpRight" size="18" class="tailoring-detail__score-arrow" />
-              <div class="tailoring-detail__score">
-                <span class="text-tertiary">After</span>
-                <span class="tailoring-detail__score-value">{{ round(detail.after_score) }}</span>
-              </div>
+              @if (detail.before_score !== null) {
+                <app-score-gauge [score]="detail.before_score" label="Before" size="md" />
+              } @else {
+                <p class="text-tertiary">Before score not available</p>
+              }
+              <ng-icon name="lucideArrowUpRight" size="20" class="tailoring-detail__score-arrow" />
+              @if (detail.after_score !== null) {
+                <app-score-gauge [score]="detail.after_score" label="After" size="md" />
+              } @else {
+                <p class="text-tertiary">After score not available</p>
+              }
             </div>
             <p class="text-tertiary tailoring-detail__requirements">
               {{ detail.requirements_improved }} requirement{{ detail.requirements_improved === 1 ? '' : 's' }} improved,
@@ -123,6 +132,10 @@ const STAGE_LABELS: Record<TailoringStatus, string> = {
         margin-bottom: var(--space-5);
         font-size: var(--text-sm);
         text-decoration: none;
+      }
+      app-application-progress {
+        display: block;
+        margin-bottom: var(--space-6);
       }
       .tailoring-detail__progress {
         display: flex;
@@ -181,20 +194,12 @@ const STAGE_LABELS: Record<TailoringStatus, string> = {
       .tailoring-detail__scores {
         display: flex;
         align-items: center;
-        gap: var(--space-5);
-      }
-      .tailoring-detail__score {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .tailoring-detail__score-value {
-        font-family: var(--font-display);
-        font-size: var(--text-2xl);
-        color: var(--ink-primary);
+        gap: var(--space-6);
+        flex-wrap: wrap;
       }
       .tailoring-detail__score-arrow {
         color: var(--match-positive);
+        flex-shrink: 0;
       }
       .tailoring-detail__requirements {
         margin: var(--space-3) 0 0;
@@ -237,7 +242,6 @@ export class TailoringDetailComponent implements OnInit {
   protected readonly plan = signal<TailoringPlanDetail | null>(null);
   protected readonly stageOrder = STAGE_ORDER;
   protected readonly stageLabels = STAGE_LABELS;
-  protected readonly round = (value: number | null) => (value === null ? '-' : Math.round(value * 100));
 
   protected readonly acceptedCount = computed(
     () => (this.plan()?.changes ?? []).filter((c) => c.accepted).length,
