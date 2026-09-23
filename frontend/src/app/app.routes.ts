@@ -87,6 +87,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'applications/new',
+        loadComponent: () =>
+          import(
+            './features/applications/pages/new-application/new-application.component'
+          ).then((m) => m.NewApplicationComponent),
+      },
+      {
         path: 'applications',
         loadComponent: () =>
           import(

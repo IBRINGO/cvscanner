@@ -93,6 +93,7 @@ import { StatusBadgeComponent } from '../status-badge/status-badge.component';
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
+        overflow-wrap: anywhere;
       }
       .doc__subheading {
         font-size: var(--text-xs);

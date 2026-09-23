@@ -52,7 +52,7 @@ interface SkillDomainCount {
           <h1>Workspace</h1>
           <p class="text-secondary">Pick up an active application, or start analyzing a new one.</p>
         </div>
-        <a routerLink="/analysis" class="workspace__cta">
+        <a routerLink="/applications/new" class="workspace__cta">
           <ng-icon name="lucideScanSearch" size="16" />
           Analyze a new application
         </a>

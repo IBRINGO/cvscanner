@@ -32,7 +32,7 @@ import { buildApplications } from '../../utils/build-applications';
       } @else if (applications().length === 0) {
         <p class="text-secondary">
           No applications yet.
-          <a routerLink="/analysis">Run your first analysis.</a>
+          <a routerLink="/applications/new">Analyze your first one.</a>
         </p>
       } @else {
         <div class="applications__list">
