@@ -18,6 +18,7 @@ from apps.candidates.models import (
 from apps.documents.models import Document as DjangoDocument
 from apps.documents.models import Evidence as DjangoEvidence
 from apps.skills.models import Skill as DjangoSkill
+from domain.cv.education_normalization import EducationLevel
 from domain.cv.entities import (
     CandidateProfile,
     CandidateSkillMention,
@@ -28,6 +29,8 @@ from domain.cv.entities import Education as DomainEducation
 from domain.cv.entities import Experience as DomainExperience
 from domain.cv.entities import Language as DomainLanguage
 from domain.cv.entities import Project as DomainProject
+from domain.cv.language_normalization import LanguageProficiency
+from domain.cv.seniority import SeniorityLevel
 from domain.documents.enums import ExtractionMethod, SectionType
 from domain.documents.evidence import Evidence
 from domain.skills.entities import Skill
@@ -199,7 +202,7 @@ def _experience_from_row(row: Experience) -> DomainExperience:
         description=row.description,
         achievements=tuple(row.achievements),
         technologies=tuple(row.technologies),
-        seniority=row.seniority,
+        seniority=SeniorityLevel(row.seniority) if row.seniority else None,
         evidence=_evidence_from_row(row.evidence),
     )
 
@@ -211,7 +214,7 @@ def _education_from_row(row: Education) -> DomainEducation:
         field_of_study=row.field_of_study,
         start_date_raw=row.start_date_raw,
         end_date_raw=row.end_date_raw,
-        degree_level=row.degree_level,
+        degree_level=EducationLevel(row.degree_level) if row.degree_level else None,
         evidence=_evidence_from_row(row.evidence),
     )
 
@@ -239,7 +242,9 @@ def _language_from_row(row: Language) -> DomainLanguage:
         name=row.name,
         proficiency=row.proficiency,
         canonical_name=row.canonical_name,
-        proficiency_normalized=row.proficiency_normalized,
+        proficiency_normalized=(
+            LanguageProficiency(row.proficiency_normalized) if row.proficiency_normalized else None
+        ),
         evidence=None,
     )
 

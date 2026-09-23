@@ -10,6 +10,7 @@ from apps.documents.models import Evidence as DjangoEvidence
 from apps.jobs.models import JobProfile as DjangoJobProfile
 from apps.jobs.models import JobRequirement
 from apps.skills.models import Skill as DjangoSkill
+from domain.cv.seniority import SeniorityLevel
 from domain.documents.enums import ExtractionMethod, SectionType
 from domain.documents.evidence import Evidence
 from domain.job.entities import JobProfile
@@ -36,7 +37,9 @@ class DjangoJobProfileRepository:
             employment_type=row.employment_type,
             seniority=row.seniority,
             summary=row.summary,
-            seniority_normalized=row.seniority_normalized,
+            seniority_normalized=(
+                SeniorityLevel(row.seniority_normalized) if row.seniority_normalized else None
+            ),
             responsibilities=tuple(row.responsibilities),
             requirements=tuple(
                 _requirement_from_row(requirement, skill_repository)

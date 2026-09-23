@@ -20,10 +20,14 @@ from application.documents.parse_document import ParseDocument
 from application.documents.upload_document import UploadDocument
 from application.jobs.extract_job_profile import ExtractJobProfile
 from application.jobs.process_pipeline import ProcessJobDocumentPipeline
+from application.matching.create_analysis import CreateAnalysis
+from application.matching.run_analysis import RunAnalysis
 from application.semantics.enrich_candidate_profile import EnrichCandidateProfile
 from application.semantics.enrich_job_profile import EnrichJobProfile
 from application.semantics.generate_embeddings import GenerateSemanticEmbeddings
+from domain.matching.weights import MATCHING_ENGINE_VERSION
 from domain.skills.enrichment import TechnologyMentionScanner
+from infrastructure.database.repositories.analysis_repository import DjangoAnalysisRepository
 from infrastructure.database.repositories.candidate_profile_repository import (
     DjangoCandidateEnrichmentRepository,
     DjangoCandidateProfileRepository,
@@ -135,4 +139,27 @@ def build_job_processing_pipeline() -> ProcessJobDocumentPipeline:
         enrich_job_profile=enrich_use_case,
         generate_embeddings=generate_embeddings,
         technology_scanner=build_technology_scanner(),
+    )
+
+
+def build_analysis_repository() -> DjangoAnalysisRepository:
+    return DjangoAnalysisRepository()
+
+
+def build_create_analysis() -> CreateAnalysis:
+    return CreateAnalysis(
+        document_repository=build_document_repository(),
+        analysis_repository=build_analysis_repository(),
+        engine_version=MATCHING_ENGINE_VERSION,
+    )
+
+
+def build_run_analysis() -> RunAnalysis:
+    return RunAnalysis(
+        candidate_profile_repository=DjangoCandidateProfileRepository(),
+        job_profile_repository=DjangoJobProfileRepository(),
+        skill_repository=DjangoSkillRepository(),
+        analysis_repository=build_analysis_repository(),
+        embedding_provider=build_embedding_provider(),
+        engine_version=MATCHING_ENGINE_VERSION,
     )
