@@ -6,6 +6,8 @@ import { CVSCANNER_ICONS } from '../../../../core/icons';
 import { StatusBadgeComponent } from '../../../../shared/components/ui/status-badge/status-badge.component';
 import { DocumentSummary } from '../../../../shared/models/document.model';
 import { formatEnumLabel } from '../../../../shared/utils/format-label';
+import { AnalysisSummary } from '../../../analysis/models/analysis.model';
+import { AnalysisApiService } from '../../../analysis/services/analysis-api.service';
 import { CvApiService } from '../../../cvs/services/cv-api.service';
 import { JobApiService } from '../../../jobs/services/job-api.service';
 import { SkillApiService } from '../../../skills/services/skill-api.service';
@@ -55,6 +57,11 @@ interface SkillDomainCount {
           <span class="dashboard__stat-value">{{ needsAttentionCount() }}</span>
           <span class="text-tertiary">Needs attention</span>
         </div>
+        <div class="dashboard__stat">
+          <ng-icon name="lucideTarget" size="20" />
+          <span class="dashboard__stat-value">{{ analyses().length }}</span>
+          <span class="text-tertiary">Analyses</span>
+        </div>
       </div>
 
       <div class="dashboard__columns">
@@ -92,6 +99,35 @@ interface SkillDomainCount {
                   <a [routerLink]="['/jobs', doc.id]">{{ doc.original_filename }}</a>
                   <app-status-badge [status]="doc.status" />
                   <span class="text-tertiary font-mono">{{ doc.created_at | date: 'MMM d' }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="dashboard__panel">
+          <h2><ng-icon name="lucideTarget" size="18" />Recent analyses</h2>
+          @if (recentAnalyses().length === 0) {
+            <p class="text-secondary">
+              No analyses yet.
+              <a routerLink="/analysis">Run your first one.</a>
+            </p>
+          } @else {
+            <ul class="dashboard__doc-list">
+              @for (analysis of recentAnalyses(); track analysis.id) {
+                <li>
+                  <a [routerLink]="['/analysis', analysis.id]">
+                    {{ documentName(analysis.candidate_document_id) }} vs
+                    {{ documentName(analysis.job_document_id) }}
+                  </a>
+                  <span class="dashboard__analysis-status" [attr.data-status]="analysis.status">
+                    @if (analysis.status === 'COMPLETED' && analysis.overall_score !== null) {
+                      {{ round(analysis.overall_score * 100) }}
+                    } @else {
+                      {{ analysis.status }}
+                    }
+                  </span>
+                  <span class="text-tertiary font-mono">{{ analysis.created_at | date: 'MMM d' }}</span>
                 </li>
               }
             </ul>
@@ -201,6 +237,19 @@ interface SkillDomainCount {
         font-size: var(--text-xl);
         color: var(--ink-primary);
       }
+      .dashboard__analysis-status {
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+        color: var(--ink-tertiary);
+        white-space: nowrap;
+      }
+      .dashboard__analysis-status[data-status='COMPLETED'] {
+        color: var(--match-positive);
+        font-weight: 500;
+      }
+      .dashboard__analysis-status[data-status='FAILED'] {
+        color: var(--match-negative);
+      }
     `,
   ],
 })
@@ -208,9 +257,12 @@ export class DashboardPageComponent implements OnInit {
   protected readonly cvs = signal<DocumentSummary[]>([]);
   protected readonly jobs = signal<DocumentSummary[]>([]);
   protected readonly skills = signal<SkillRef[]>([]);
+  protected readonly analyses = signal<AnalysisSummary[]>([]);
+  protected readonly round = Math.round;
 
   protected readonly recentCvs = computed(() => this.cvs().slice(0, RECENT_LIMIT));
   protected readonly recentJobs = computed(() => this.jobs().slice(0, RECENT_LIMIT));
+  protected readonly recentAnalyses = computed(() => this.analyses().slice(0, RECENT_LIMIT));
   protected readonly needsAttentionCount = computed(
     () =>
       this.cvs().filter((doc) => doc.status === 'FAILED').length +
@@ -228,15 +280,22 @@ export class DashboardPageComponent implements OnInit {
     private readonly cvApi: CvApiService,
     private readonly jobApi: JobApiService,
     private readonly skillApi: SkillApiService,
+    private readonly analysisApi: AnalysisApiService,
   ) {}
 
   ngOnInit(): void {
     this.cvApi.list().subscribe((docs) => this.cvs.set(docs));
     this.jobApi.list().subscribe((docs) => this.jobs.set(docs));
     this.skillApi.list().subscribe((skills) => this.skills.set(skills));
+    this.analysisApi.list().subscribe((analyses) => this.analyses.set(analyses));
   }
 
   formatEnumLabel(value: string): string {
     return formatEnumLabel(value);
+  }
+
+  documentName(documentId: string): string {
+    const match = [...this.cvs(), ...this.jobs()].find((document) => document.id === documentId);
+    return match?.original_filename ?? 'Document';
   }
 }

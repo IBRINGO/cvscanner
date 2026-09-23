@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { AnalysisApiService } from '../../../analysis/services/analysis-api.service';
 import { CvApiService } from '../../../cvs/services/cv-api.service';
 import { JobApiService } from '../../../jobs/services/job-api.service';
 import { SkillApiService } from '../../../skills/services/skill-api.service';
@@ -28,13 +29,16 @@ describe('DashboardPageComponent', () => {
   let cvApiSpy: jasmine.SpyObj<CvApiService>;
   let jobApiSpy: jasmine.SpyObj<JobApiService>;
   let skillApiSpy: jasmine.SpyObj<SkillApiService>;
+  let analysisApiSpy: jasmine.SpyObj<AnalysisApiService>;
 
   function setup(cvs: DocumentSummary[], jobs: DocumentSummary[]): void {
     cvApiSpy = jasmine.createSpyObj('CvApiService', ['list']);
     jobApiSpy = jasmine.createSpyObj('JobApiService', ['list']);
     skillApiSpy = jasmine.createSpyObj('SkillApiService', ['list']);
+    analysisApiSpy = jasmine.createSpyObj('AnalysisApiService', ['list']);
     cvApiSpy.list.and.returnValue(of(cvs));
     jobApiSpy.list.and.returnValue(of(jobs));
+    analysisApiSpy.list.and.returnValue(of([]));
     skillApiSpy.list.and.returnValue(
       of([
         { canonical_name: 'Python', category: 'PROGRAMMING_LANGUAGE', domain: 'SOFTWARE_DEVELOPMENT', description: null },
@@ -49,6 +53,7 @@ describe('DashboardPageComponent', () => {
         { provide: CvApiService, useValue: cvApiSpy },
         { provide: JobApiService, useValue: jobApiSpy },
         { provide: SkillApiService, useValue: skillApiSpy },
+        { provide: AnalysisApiService, useValue: analysisApiSpy },
         { provide: HealthService, useValue: jasmine.createSpyObj('HealthService', { check: of({ status: 'ok', service: 'x', version: '1' }) }) },
       ],
     });
@@ -98,5 +103,60 @@ describe('DashboardPageComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent?.toLowerCase() ?? '';
     expect(text).not.toContain('match score');
     expect(text).not.toContain('compatibility');
+  });
+
+  it('shows an empty state for analyses when none exist', () => {
+    setup([], []);
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('No analyses yet');
+  });
+
+  it('shows recent analyses with real document names and status, not a fabricated score', () => {
+    cvApiSpy = jasmine.createSpyObj('CvApiService', ['list']);
+    jobApiSpy = jasmine.createSpyObj('JobApiService', ['list']);
+    skillApiSpy = jasmine.createSpyObj('SkillApiService', ['list']);
+    analysisApiSpy = jasmine.createSpyObj('AnalysisApiService', ['list']);
+    cvApiSpy.list.and.returnValue(of([doc({ id: 'cv-1', original_filename: 'jordan.pdf' })]));
+    jobApiSpy.list.and.returnValue(
+      of([doc({ id: 'job-1', document_type: 'JOB_OFFER', original_filename: 'backend-role.pdf' })]),
+    );
+    skillApiSpy.list.and.returnValue(of([]));
+    analysisApiSpy.list.and.returnValue(
+      of([
+        {
+          id: 'analysis-1',
+          candidate_document_id: 'cv-1',
+          job_document_id: 'job-1',
+          status: 'COMPLETED',
+          engine_version: '1.0.0',
+          overall_score: 0.72,
+          created_at: '2026-01-01T00:00:00Z',
+          completed_at: '2026-01-01T00:00:00Z',
+        },
+      ]),
+    );
+
+    TestBed.configureTestingModule({
+      imports: [DashboardPageComponent],
+      providers: [
+        provideRouter([]),
+        { provide: CvApiService, useValue: cvApiSpy },
+        { provide: JobApiService, useValue: jobApiSpy },
+        { provide: SkillApiService, useValue: skillApiSpy },
+        { provide: AnalysisApiService, useValue: analysisApiSpy },
+        {
+          provide: HealthService,
+          useValue: jasmine.createSpyObj('HealthService', { check: of({ status: 'ok', service: 'x', version: '1' }) }),
+        },
+      ],
+    });
+    fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('jordan.pdf');
+    expect(text).toContain('backend-role.pdf');
+    expect(text).toContain('72');
   });
 });
