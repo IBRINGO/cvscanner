@@ -16,8 +16,11 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
  * miniature of the real page, not a different layout.
  */
 const THUMB_REFERENCE_WIDTH = 760;
-const THUMB_WIDTH = 240;
+const THUMB_WIDTH = 280;
 const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
+/** A4 (210 x 297mm) - real CVs are printed on A4, so the thumbnail crop
+ * should read as an actual sheet of paper, not an arbitrary rectangle. */
+const A4_RATIO = '210 / 297';
 
 /**
  * The template gallery: full-size, realistic previews so templates can
@@ -108,13 +111,18 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
       }
       .gallery__grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, ${THUMB_WIDTH}px);
+        grid-template-columns: repeat(3, ${THUMB_WIDTH}px);
         justify-content: center;
-        gap: var(--space-7) var(--space-6);
+        gap: var(--space-8) var(--space-7);
       }
-      @media (min-width: 860px) {
+      @media (max-width: 1120px) {
         .gallery__grid {
-          justify-content: start;
+          grid-template-columns: repeat(2, ${THUMB_WIDTH}px);
+        }
+      }
+      @media (max-width: 720px) {
+        .gallery__grid {
+          grid-template-columns: repeat(1, ${THUMB_WIDTH}px);
         }
       }
       .gallery__card {
@@ -133,7 +141,7 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
       .gallery__thumb {
         position: relative;
         width: ${THUMB_WIDTH}px;
-        aspect-ratio: 3 / 4;
+        aspect-ratio: ${A4_RATIO};
         overflow: hidden;
         border-radius: var(--radius-md);
         border: 1px solid var(--paper-border);

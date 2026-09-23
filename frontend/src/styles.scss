@@ -51,6 +51,13 @@ select {
 // to <body> for the duration of the print call), everything is hidden
 // except the one rendered .cv-page, promoted to fill the printed page -
 // no separate print window, no export library, no backend involvement.
+// Fixed to A4 regardless of the browser/OS's default paper size (which
+// is often US Letter) - CVScanner's exported CVs must always be A4.
+@page {
+  size: A4;
+  margin: 0;
+}
+
 @media print {
   body.cv-printing * {
     visibility: hidden;

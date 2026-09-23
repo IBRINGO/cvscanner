@@ -643,10 +643,11 @@ export class CvEditorComponent implements OnInit {
 
   openExport(): void {
     const page = document.querySelector<HTMLElement>('.cv-page');
-    // ~1000px of rendered content per printed page at 96dpi, after
-    // typical margins - an estimate, not a guarantee, and labelled as
-    // such in the panel.
-    const pageHeightPx = 1000;
+    // A4 height (297mm) at 96dpi, matching the `@page { size: A4;
+    // margin: 0 }` rule in styles.scss - an estimate, not a guarantee
+    // (the browser's own print engine has the final say on breaks), and
+    // labelled as such in the panel.
+    const pageHeightPx = 1122;
     this.estimatedPages.set(page ? Math.max(1, Math.ceil(page.scrollHeight / pageHeightPx)) : 1);
     this.showExport.set(true);
   }
