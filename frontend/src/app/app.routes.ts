@@ -61,11 +61,24 @@ export const routes: Routes = [
             './features/recommendations/pages/recommendations-page/recommendations-page.component'
           ).then((m) => m.RecommendationsPageComponent),
       },
-      // The generic nav entries have no single analysis to show - Phase 5's
-      // recommendations/tailoring are always scoped to one analysis, so the
-      // real entry point is picking one from the analysis workspace.
-      { path: 'recommendations', redirectTo: 'analysis', pathMatch: 'full' },
-      { path: 'tailoring', redirectTo: 'analysis', pathMatch: 'full' },
+      // Recommendations/tailoring are always scoped to one analysis, so
+      // the generic nav entries are real hub pages (pick an analysis or
+      // past run) rather than a silent redirect to an unrelated page -
+      // the nav label must match what the candidate actually sees next.
+      {
+        path: 'recommendations',
+        loadComponent: () =>
+          import(
+            './features/recommendations/pages/recommendations-hub/recommendations-hub.component'
+          ).then((m) => m.RecommendationsHubComponent),
+      },
+      {
+        path: 'tailoring',
+        loadComponent: () =>
+          import('./features/tailoring/pages/tailoring-hub/tailoring-hub.component').then(
+            (m) => m.TailoringHubComponent,
+          ),
+      },
       {
         path: 'tailoring/:id',
         loadComponent: () =>
