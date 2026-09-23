@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { forkJoin } from 'rxjs';
 import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { DocumentPreviewComponent } from '../../../../shared/components/ui/document-preview/document-preview.component';
 import { StatusBadgeComponent } from '../../../../shared/components/ui/status-badge/status-badge.component';
 import { DocumentSummary } from '../../../../shared/models/document.model';
 import { formatEnumLabel } from '../../../../shared/utils/format-label';
@@ -39,6 +40,7 @@ interface SkillDomainCount {
     HealthStatusComponent,
     StatusBadgeComponent,
     ApplicationCardComponent,
+    DocumentPreviewComponent,
     RouterLink,
     DatePipe,
     NgIcon,
@@ -47,16 +49,48 @@ interface SkillDomainCount {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="workspace">
-      <header class="workspace__header">
-        <div>
-          <h1>Workspace</h1>
-          <p class="text-secondary">Pick up an active application, or start analyzing a new one.</p>
+      <section class="workspace__hero">
+        <div class="workspace__hero-copy">
+          <h1>Analyze a job against your CV and build a stronger application.</h1>
+          <p class="text-secondary">
+            Upload your CV and a job description, see exactly how well you match, then get
+            evidence-backed recommendations and a tailored, professionally designed CV - ready to
+            export.
+          </p>
+          <div class="workspace__hero-actions">
+            <a routerLink="/applications/new" class="workspace__cta">
+              <ng-icon name="lucideScanSearch" size="16" />
+              Start an application
+            </a>
+            <a routerLink="/templates" class="workspace__cta workspace__cta--secondary">
+              <ng-icon name="lucideLayers" size="16" />
+              Explore templates
+            </a>
+          </div>
         </div>
-        <a routerLink="/applications/new" class="workspace__cta">
-          <ng-icon name="lucideScanSearch" size="16" />
-          Analyze a new application
-        </a>
-      </header>
+
+        <div class="workspace__hero-visual" aria-hidden="true">
+          <div class="workspace__flow-docs">
+            <div class="workspace__flow-doc">
+              <app-document-preview kind="cv" heading="Your CV" filename="cv.pdf" />
+            </div>
+            <span class="workspace__flow-plus">+</span>
+            <div class="workspace__flow-doc">
+              <app-document-preview kind="job" heading="Target job" filename="job.pdf" />
+            </div>
+          </div>
+          <ng-icon name="lucideChevronDown" size="18" class="workspace__flow-arrow" />
+          <div class="workspace__flow-badge">
+            <ng-icon name="lucideTarget" size="15" />
+            ATS analysis
+          </div>
+          <ng-icon name="lucideChevronDown" size="18" class="workspace__flow-arrow" />
+          <div class="workspace__flow-badge workspace__flow-badge--accent">
+            <ng-icon name="lucideFileCheck" size="15" />
+            Tailored, exportable CV
+          </div>
+        </div>
+      </section>
 
       <section class="workspace__section">
         <h2>Active applications</h2>
@@ -166,17 +200,81 @@ interface SkillDomainCount {
         gap: var(--space-7);
         max-width: 1040px;
       }
-      .workspace__header {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: var(--space-4);
-        flex-wrap: wrap;
+      .workspace__hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+        gap: var(--space-7);
+        align-items: center;
+        padding: var(--space-6);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        animation: workspace-hero-in var(--motion-slow) var(--motion-ease);
       }
-      .workspace__header > div {
+      @keyframes workspace-hero-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .workspace__hero-copy {
         display: flex;
         flex-direction: column;
-        gap: var(--space-1);
+        gap: var(--space-4);
+      }
+      .workspace__hero-copy h1 {
+        font-size: var(--text-2xl);
+        max-width: 18ch;
+      }
+      .workspace__hero-copy p {
+        max-width: 52ch;
+      }
+      .workspace__hero-actions {
+        display: flex;
+        gap: var(--space-3);
+        flex-wrap: wrap;
+      }
+      .workspace__hero-visual {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .workspace__flow-docs {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+      }
+      .workspace__flow-doc {
+        max-width: 108px;
+      }
+      .workspace__flow-plus {
+        font-family: var(--font-display);
+        font-size: var(--text-xl);
+        color: var(--ink-tertiary);
+        flex-shrink: 0;
+      }
+      .workspace__flow-arrow {
+        color: var(--ink-tertiary);
+      }
+      .workspace__flow-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-pill);
+        background: var(--surface-sunken);
+        color: var(--ink-secondary);
+        font-size: var(--text-sm);
+        font-weight: 600;
+      }
+      .workspace__flow-badge--accent {
+        background: var(--gradient-brand);
+        color: #fff;
       }
       .workspace__cta {
         display: inline-flex;
@@ -194,6 +292,14 @@ interface SkillDomainCount {
       }
       .workspace__cta:hover {
         background: var(--accent-strong);
+      }
+      .workspace__cta--secondary {
+        background: none;
+        border: 1px solid var(--border-strong);
+        color: var(--ink-primary);
+      }
+      .workspace__cta--secondary:hover {
+        background: var(--surface-sunken);
       }
       .workspace__section {
         display: flex;
@@ -276,8 +382,23 @@ interface SkillDomainCount {
         color: var(--ink-primary);
       }
 
+      @media (prefers-reduced-motion: reduce) {
+        .workspace__hero {
+          animation: none;
+        }
+      }
+
+      @media (max-width: 860px) {
+        .workspace__hero {
+          grid-template-columns: 1fr;
+        }
+        .workspace__hero-visual {
+          order: -1;
+        }
+      }
+
       @media (max-width: 640px) {
-        .workspace__header {
+        .workspace__hero-actions {
           flex-direction: column;
           align-items: stretch;
         }

@@ -184,10 +184,12 @@ const NAV_ITEMS: NavItem[] = [
       @media (max-width: 767px) {
         .app-sidebar {
           position: fixed;
-          inset: 0 25% 0 auto;
+          top: 0;
+          left: 0;
+          bottom: 0;
           z-index: 60;
           width: min(280px, 75vw);
-          transform: translateX(100%);
+          transform: translateX(-100%);
           box-shadow: var(--shadow-overlay);
           transition: transform var(--motion-base) var(--motion-ease);
         }

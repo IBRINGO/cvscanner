@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { CVSCANNER_ICONS } from '../../../../core/icons';
 import { CvDocumentRendererComponent } from '../../components/cv-document-renderer/cv-document-renderer.component';
 import { CandidateProfile } from '../../../cvs/models/candidate-profile.model';
 import { DEFAULT_SECTION_ORDER } from '../../../cvs/models/cv-document.model';
@@ -17,7 +19,8 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
 @Component({
   selector: 'app-template-gallery-page',
   standalone: true,
-  imports: [RouterLink, CvDocumentRendererComponent],
+  imports: [RouterLink, CvDocumentRendererComponent, NgIcon],
+  viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="gallery__header">
@@ -47,14 +50,22 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
             }
           </div>
           <div class="gallery__meta">
+            <div class="gallery__badges">
+              <span class="gallery__badge">{{ t.columns }}-column</span>
+              <span class="gallery__badge gallery__badge--ats">
+                <ng-icon name="lucideCircleCheck" size="12" />
+                ATS-friendly
+              </span>
+            </div>
             <h2>{{ t.name }}</h2>
             <p class="text-secondary">{{ t.description }}</p>
             @if (cvId(); as id) {
-              <a [routerLink]="['/cvs', id, 'editor']" [queryParams]="{ template: t.id }" class="gallery__use">
-                Use this template
+              <a [routerLink]="['/cvs', id, 'editor']" [queryParams]="{ template: t.id }" class="gallery__select">
+                Select this template
+                <ng-icon name="lucideArrowUpRight" size="14" />
               </a>
             } @else {
-              <a routerLink="/cvs" class="gallery__use">Upload a CV to use this template</a>
+              <a routerLink="/cvs" class="gallery__select gallery__select--secondary">Upload a CV to use this template</a>
             }
           </div>
         </article>
@@ -87,16 +98,53 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
         overflow: hidden;
         border-radius: var(--radius-md);
       }
+      .gallery__badges {
+        display: flex;
+        gap: var(--space-2);
+        margin-bottom: var(--space-1);
+      }
+      .gallery__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px var(--space-2);
+        border-radius: var(--radius-pill);
+        background: var(--surface-sunken);
+        color: var(--ink-secondary);
+        font-size: var(--text-xs);
+        font-weight: 600;
+      }
+      .gallery__badge--ats {
+        background: var(--positive-tint);
+        color: var(--positive);
+      }
       .gallery__meta h2 {
         margin-bottom: 2px;
       }
-      .gallery__use {
-        display: inline-block;
+      .gallery__select {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
         margin-top: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-sm);
+        background: var(--accent);
+        color: #fff;
         font-size: var(--text-sm);
         font-weight: 600;
-        color: var(--accent);
         text-decoration: none;
+        width: fit-content;
+      }
+      .gallery__select:hover {
+        background: var(--accent-strong);
+      }
+      .gallery__select--secondary {
+        background: none;
+        border: 1px solid var(--border-strong);
+        color: var(--ink-primary);
+      }
+      .gallery__select--secondary:hover {
+        background: var(--surface-sunken);
       }
     `,
   ],
