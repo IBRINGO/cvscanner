@@ -1,11 +1,13 @@
+import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { ApplicationSessionService } from '../../../applications/services/application-session.service';
 import { CvDocumentRendererComponent } from '../../../templates/components/cv-document-renderer/cv-document-renderer.component';
 import { CV_TEMPLATES, TemplateDefinition, findTemplate } from '../../../templates/models/template-definition.model';
-import { CandidateProfile, Experience } from '../../models/candidate-profile.model';
+import { CandidateProfile, Education, Experience, Project } from '../../models/candidate-profile.model';
 import {
   CustomSectionRef,
   CvSectionRef,
@@ -13,7 +15,9 @@ import {
   SECTION_LABELS,
 } from '../../models/cv-document.model';
 import { EditorSnapshot } from '../../models/editor-state.model';
+import { applyTailoringChanges } from '../../utils/apply-tailoring-changes';
 import { CvApiService } from '../../services/cv-api.service';
+import { TailoringApiService } from '../../../tailoring/services/tailoring-api.service';
 
 /**
  * The CV editor: structured editing over the same CandidateProfile the
@@ -28,7 +32,7 @@ import { CvApiService } from '../../services/cv-api.service';
 @Component({
   selector: 'app-cv-editor-page',
   standalone: true,
-  imports: [RouterLink, FormsModule, NgIcon, CvDocumentRendererComponent],
+  imports: [RouterLink, FormsModule, NgIcon, CvDocumentRendererComponent, CdkDropList, CdkDrag, CdkDragHandle],
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -79,11 +83,17 @@ import { CvApiService } from '../../services/cv-api.service';
     } @else if (!profile()) {
       <p class="text-secondary">This CV has no extracted profile yet.</p>
     } @else {
+      @if (fromTailoringId()) {
+        <div class="editor__tailored-banner">
+          <ng-icon name="lucideCircleCheck" size="15" />
+          Editing your tailored CV - accepted, factually-verified changes are already applied.
+        </div>
+      }
       <div class="editor">
         <aside class="editor__panel editor__sections">
           <div class="editor__field">
             <label class="editor__label" for="template-select">Template</label>
-            <select id="template-select" class="editor__select" [ngModel]="templateId()" (ngModelChange)="templateId.set($event)">
+            <select id="template-select" class="editor__select" [ngModel]="templateId()" (ngModelChange)="setTemplate($event)">
               @for (t of templates; track t.id) {
                 <option [value]="t.id">{{ t.name }}</option>
               }
@@ -93,28 +103,22 @@ import { CvApiService } from '../../services/cv-api.service';
 
           <div class="editor__field">
             <span class="editor__label">Sections</span>
-            <ul class="editor__section-list">
+            <p class="editor__hint text-tertiary">Drag to reorder</p>
+            <ul class="editor__section-list" cdkDropList (cdkDropListDropped)="onSectionDrop($event)">
               @for (ref of sectionOrder(); track ref.id; let i = $index) {
                 <li
                   class="editor__section-row"
+                  cdkDrag
                   [attr.data-selected]="selectedSectionId() === ref.id"
                   [attr.data-hidden]="hiddenSectionIds().includes(ref.id)"
                 >
+                  <span class="editor__drag-handle" cdkDragHandle>
+                    <ng-icon name="lucideGripVertical" size="14" />
+                  </span>
                   <button type="button" class="editor__section-name" (click)="selectedSectionId.set(ref.id)">
                     {{ labelFor(ref) }}
                   </button>
                   <div class="editor__section-actions">
-                    <button type="button" title="Move up" [disabled]="i === 0" (click)="moveSection(i, -1)">
-                      <ng-icon name="lucideChevronRight" size="13" class="editor__icon-up" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Move down"
-                      [disabled]="i === sectionOrder().length - 1"
-                      (click)="moveSection(i, 1)"
-                    >
-                      <ng-icon name="lucideChevronRight" size="13" class="editor__icon-down" />
-                    </button>
                     <button
                       type="button"
                       [title]="hiddenSectionIds().includes(ref.id) ? 'Show section' : 'Hide section'"
@@ -144,6 +148,9 @@ import { CvApiService } from '../../services/cv-api.service';
             [sectionOrder]="sectionOrder()"
             [hiddenSectionIds]="hiddenSectionIds()"
             [template]="currentTemplate()"
+            [interactive]="true"
+            [selectedSectionId]="selectedSectionId()"
+            (sectionSelected)="selectedSectionId.set($event)"
           />
         </div>
 
@@ -164,6 +171,14 @@ import { CvApiService } from '../../services/cv-api.service';
             @case ('experience') {
               @for (exp of profile()!.experiences; track $index; let i = $index) {
                 <div class="editor__entry-card">
+                  <div class="editor__entry-toolbar">
+                    <button type="button" title="Duplicate" (click)="duplicateExperience(i)">
+                      <ng-icon name="lucideCopy" size="13" />
+                    </button>
+                    <button type="button" title="Delete" (click)="removeExperience(i)">
+                      <ng-icon name="lucideTrash2" size="13" />
+                    </button>
+                  </div>
                   <label class="editor__field">
                     <span class="editor__label">Role</span>
                     <input type="text" [ngModel]="exp.title ?? ''" (ngModelChange)="updateExperience(i, 'title', $event)" />
@@ -178,10 +193,22 @@ import { CvApiService } from '../../services/cv-api.service';
                   </label>
                 </div>
               }
+              <button type="button" class="editor__add-entry" (click)="addExperience()">
+                <ng-icon name="lucidePlus" size="14" />
+                Add experience
+              </button>
             }
             @case ('education') {
               @for (entry of profile()!.education; track $index; let i = $index) {
                 <div class="editor__entry-card">
+                  <div class="editor__entry-toolbar">
+                    <button type="button" title="Duplicate" (click)="duplicateEducation(i)">
+                      <ng-icon name="lucideCopy" size="13" />
+                    </button>
+                    <button type="button" title="Delete" (click)="removeEducation(i)">
+                      <ng-icon name="lucideTrash2" size="13" />
+                    </button>
+                  </div>
                   <label class="editor__field">
                     <span class="editor__label">Degree</span>
                     <input type="text" [ngModel]="entry.degree ?? ''" (ngModelChange)="updateEducation(i, 'degree', $event)" />
@@ -192,6 +219,36 @@ import { CvApiService } from '../../services/cv-api.service';
                   </label>
                 </div>
               }
+              <button type="button" class="editor__add-entry" (click)="addEducation()">
+                <ng-icon name="lucidePlus" size="14" />
+                Add education
+              </button>
+            }
+            @case ('projects') {
+              @for (project of profile()!.projects; track $index; let i = $index) {
+                <div class="editor__entry-card">
+                  <div class="editor__entry-toolbar">
+                    <button type="button" title="Duplicate" (click)="duplicateProject(i)">
+                      <ng-icon name="lucideCopy" size="13" />
+                    </button>
+                    <button type="button" title="Delete" (click)="removeListItem('projects', i)">
+                      <ng-icon name="lucideTrash2" size="13" />
+                    </button>
+                  </div>
+                  <label class="editor__field">
+                    <span class="editor__label">Title</span>
+                    <input type="text" [ngModel]="project.name" (ngModelChange)="updateProject(i, 'name', $event)" />
+                  </label>
+                  <label class="editor__field">
+                    <span class="editor__label">Description</span>
+                    <textarea rows="3" [ngModel]="project.description ?? ''" (ngModelChange)="updateProject(i, 'description', $event)"></textarea>
+                  </label>
+                </div>
+              }
+              <button type="button" class="editor__add-entry" (click)="addProject()">
+                <ng-icon name="lucidePlus" size="14" />
+                Add project
+              </button>
             }
             @case ('skills') {
               <ul class="editor__chip-list">
@@ -223,18 +280,6 @@ import { CvApiService } from '../../services/cv-api.service';
                   <li>
                     {{ lang.canonical_name ?? lang.name }}
                     <button type="button" title="Remove from CV" (click)="removeListItem('languages', i)">
-                      <ng-icon name="lucideX" size="12" />
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
-            @case ('projects') {
-              <ul class="editor__chip-list">
-                @for (project of profile()!.projects; track $index; let i = $index) {
-                  <li>
-                    {{ project.name }}
-                    <button type="button" title="Remove from CV" (click)="removeListItem('projects', i)">
                       <ng-icon name="lucideX" size="12" />
                     </button>
                   </li>
@@ -281,6 +326,7 @@ export class CvEditorComponent implements OnInit {
 
   readonly showExport = signal(false);
   readonly estimatedPages = signal(1);
+  readonly fromTailoringId = signal<string | null>(null);
 
   protected readonly currentTemplate = computed<TemplateDefinition>(() => findTemplate(this.templateId()));
   protected readonly selectedRef = computed<CvSectionRef | undefined>(() =>
@@ -288,27 +334,63 @@ export class CvEditorComponent implements OnInit {
   );
 
   private readonly route = inject(ActivatedRoute);
+  private readonly session = inject(ApplicationSessionService);
 
-  constructor(private readonly cvApi: CvApiService) {
+  constructor(
+    private readonly cvApi: CvApiService,
+    private readonly tailoringApi: TailoringApiService,
+  ) {
     this.documentId = this.route.snapshot.paramMap.get('id') ?? '';
+  }
+
+  setTemplate(id: string): void {
+    this.templateId.set(id);
+    this.session.setTemplate(id);
   }
 
   ngOnInit(): void {
     const requestedTemplate = this.route.snapshot.queryParamMap.get('template');
     if (requestedTemplate && this.templates.some((t) => t.id === requestedTemplate)) {
-      this.templateId.set(requestedTemplate);
+      this.setTemplate(requestedTemplate);
     }
 
     if (!this.documentId) {
       this.loading.set(false);
       return;
     }
+
+    const tailoringId = this.route.snapshot.queryParamMap.get('tailoringId');
+
     this.cvApi.getProfile(this.documentId).subscribe({
       next: (response) => {
-        this.profile.set(response.profile);
-        this.loading.set(false);
+        if (!response.profile) {
+          this.loading.set(false);
+          return;
+        }
+        if (tailoringId) {
+          this.loadTailoredProfile(tailoringId, response.profile);
+        } else {
+          this.profile.set(response.profile);
+          this.loading.set(false);
+        }
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  private loadTailoredProfile(tailoringId: string, original: CandidateProfile): void {
+    this.tailoringApi.getPlan(tailoringId).subscribe({
+      next: (plan) => {
+        this.profile.set(applyTailoringChanges(original, plan.changes));
+        this.fromTailoringId.set(tailoringId);
+        this.loading.set(false);
+      },
+      error: () => {
+        // The tailoring plan could not be loaded - fall back to the real
+        // original profile rather than blocking the editor entirely.
+        this.profile.set(original);
+        this.loading.set(false);
+      },
     });
   }
 
@@ -327,13 +409,11 @@ export class CvEditorComponent implements OnInit {
     return ref?.kind === 'custom' ? ref.content : '';
   }
 
-  moveSection(index: number, direction: -1 | 1): void {
-    const target = index + direction;
-    const order = this.sectionOrder();
-    if (target < 0 || target >= order.length) return;
+  onSectionDrop(event: CdkDragDrop<CvSectionRef[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
     this.pushHistory();
-    const next = [...order];
-    [next[index], next[target]] = [next[target], next[index]];
+    const next = [...this.sectionOrder()];
+    moveItemInArray(next, event.previousIndex, event.currentIndex);
     this.sectionOrder.set(next);
   }
 
@@ -389,6 +469,92 @@ export class CvEditorComponent implements OnInit {
       const education = [...p.education];
       education[index] = { ...education[index], [field]: value };
       return { ...p, education };
+    });
+  }
+
+  addExperience(): void {
+    this.pushHistory();
+    const blank: Experience = {
+      title: 'New role',
+      company: null,
+      start_date_raw: null,
+      end_date_raw: null,
+      description: '',
+      achievements: [],
+      technologies: [],
+      seniority: null,
+      evidence: null,
+    };
+    this.profile.update((p) => (p ? { ...p, experiences: [...p.experiences, blank] } : p));
+  }
+
+  duplicateExperience(index: number): void {
+    this.pushHistory();
+    this.profile.update((p) => {
+      if (!p) return p;
+      const experiences = [...p.experiences];
+      experiences.splice(index + 1, 0, { ...experiences[index] });
+      return { ...p, experiences };
+    });
+  }
+
+  removeExperience(index: number): void {
+    this.pushHistory();
+    this.profile.update((p) => (p ? { ...p, experiences: p.experiences.filter((_, i) => i !== index) } : p));
+  }
+
+  addEducation(): void {
+    this.pushHistory();
+    const blank: Education = {
+      institution: 'New institution',
+      degree: null,
+      field_of_study: null,
+      start_date_raw: null,
+      end_date_raw: null,
+      degree_level: null,
+      evidence: null,
+    };
+    this.profile.update((p) => (p ? { ...p, education: [...p.education, blank] } : p));
+  }
+
+  duplicateEducation(index: number): void {
+    this.pushHistory();
+    this.profile.update((p) => {
+      if (!p) return p;
+      const education = [...p.education];
+      education.splice(index + 1, 0, { ...education[index] });
+      return { ...p, education };
+    });
+  }
+
+  removeEducation(index: number): void {
+    this.pushHistory();
+    this.profile.update((p) => (p ? { ...p, education: p.education.filter((_, i) => i !== index) } : p));
+  }
+
+  addProject(): void {
+    this.pushHistory();
+    const blank: Project = { name: 'New project', description: '', technologies: [] };
+    this.profile.update((p) => (p ? { ...p, projects: [...p.projects, blank] } : p));
+  }
+
+  duplicateProject(index: number): void {
+    this.pushHistory();
+    this.profile.update((p) => {
+      if (!p) return p;
+      const projects = [...p.projects];
+      projects.splice(index + 1, 0, { ...projects[index] });
+      return { ...p, projects };
+    });
+  }
+
+  updateProject(index: number, field: 'name' | 'description', value: string): void {
+    this.pushHistory();
+    this.profile.update((p) => {
+      if (!p) return p;
+      const projects = [...p.projects];
+      projects[index] = { ...projects[index], [field]: value };
+      return { ...p, projects };
     });
   }
 

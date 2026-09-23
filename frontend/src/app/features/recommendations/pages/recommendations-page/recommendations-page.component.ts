@@ -11,6 +11,7 @@ import { TailoringApiService } from '../../../tailoring/services/tailoring-api.s
 import { RecommendationListComponent } from '../../components/recommendation-list/recommendation-list.component';
 import { Recommendation } from '../../models/recommendation.model';
 import { RecommendationApiService } from '../../services/recommendation-api.service';
+import { ApplicationSessionService } from '../../../applications/services/application-session.service';
 
 /**
  * The recommendations workspace for one analysis (Phase 5 sections
@@ -256,6 +257,7 @@ export class RecommendationsPageComponent implements OnInit {
     private readonly analysisApi: AnalysisApiService,
     private readonly cvApi: CvApiService,
     private readonly jobApi: JobApiService,
+    private readonly session: ApplicationSessionService,
   ) {
     this.analysisId = this.route.snapshot.paramMap.get('id') ?? '';
   }
@@ -293,6 +295,8 @@ export class RecommendationsPageComponent implements OnInit {
     this.tailoringApi.create(this.analysisId, this.mode(), this.selectedIds()).subscribe({
       next: (plan) => {
         this.creating.set(false);
+        this.session.setAnalysis(this.analysisId);
+        this.session.setTailoring(plan.id);
         this.router.navigate(['/tailoring', plan.id]);
       },
       error: (err) => {

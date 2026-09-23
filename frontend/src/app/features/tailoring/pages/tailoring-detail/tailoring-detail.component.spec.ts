@@ -3,6 +3,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
+import { AnalysisApiService } from '../../../analysis/services/analysis-api.service';
 import { TailoringPlanDetail, TailoringStatusResponse } from '../../models/tailoring.model';
 import { TailoringApiService } from '../../services/tailoring-api.service';
 import { TailoringDetailComponent } from './tailoring-detail.component';
@@ -10,6 +11,7 @@ import { TailoringDetailComponent } from './tailoring-detail.component';
 describe('TailoringDetailComponent', () => {
   let fixture: ComponentFixture<TailoringDetailComponent>;
   let tailoringApiSpy: jasmine.SpyObj<TailoringApiService>;
+  let analysisApiSpy: jasmine.SpyObj<AnalysisApiService>;
 
   function pendingDetail(overrides: Partial<TailoringPlanDetail> = {}): TailoringPlanDetail {
     return {
@@ -64,6 +66,18 @@ describe('TailoringDetailComponent', () => {
     // animation.
     spyOn(window, 'matchMedia').and.returnValue({ matches: true } as MediaQueryList);
     tailoringApiSpy = jasmine.createSpyObj('TailoringApiService', ['getPlan', 'getStatus']);
+    analysisApiSpy = jasmine.createSpyObj('AnalysisApiService', {
+      getAnalysis: of({
+        id: 'analysis-1',
+        candidate_document_id: 'cv-1',
+        job_document_id: 'job-1',
+        status: 'COMPLETED',
+        engine_version: '1.0.0',
+        overall_score: 0.72,
+        created_at: '2026-01-01T00:00:00Z',
+        completed_at: '2026-01-01T00:00:00Z',
+      }),
+    });
     TestBed.configureTestingModule({
       imports: [TailoringDetailComponent],
       providers: [
@@ -71,6 +85,7 @@ describe('TailoringDetailComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: TailoringApiService, useValue: tailoringApiSpy },
+        { provide: AnalysisApiService, useValue: analysisApiSpy },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 'plan-1' }) } } },
       ],
     });
@@ -170,6 +185,27 @@ describe('TailoringDetailComponent', () => {
       const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
       expect(text).toContain('1 change verified');
       expect(text).toContain('1 proposed change could not be verified');
+    }),
+  );
+
+  it(
+    'links to the CV editor for the real candidate document once completed, carrying the plan id',
+    fakeAsync(() => {
+      setup();
+      tailoringApiSpy.getPlan.and.returnValues(of(pendingDetail()), of(completedDetail({ id: 'plan-1' })));
+      tailoringApiSpy.getStatus.and.returnValue(
+        of({ id: 'plan-1', status: 'COMPLETED', error: null, completed_at: '2026-01-01' } as TailoringStatusResponse),
+      );
+
+      fixture.detectChanges();
+      tick();
+      fixture.detectChanges();
+
+      expect(analysisApiSpy.getAnalysis).toHaveBeenCalledWith('analysis-1');
+      const link = (fixture.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+        '.tailoring-detail__continue',
+      );
+      expect(link?.getAttribute('href')).toBe('/cvs/cv-1/editor?tailoringId=plan-1');
     }),
   );
 });

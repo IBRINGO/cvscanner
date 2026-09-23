@@ -94,4 +94,36 @@ describe('CvDocumentRendererComponent', () => {
     expect(page?.getAttribute('data-template')).toBe('technical');
     expect(page?.textContent).toContain('Jordan Rivera');
   });
+
+  it('is not clickable/selectable by default (read-only contexts like the gallery)', () => {
+    setup();
+    const slot = (fixture.nativeElement as HTMLElement).querySelector('.cv-section-slot');
+    expect(slot?.getAttribute('data-interactive')).toBe('false');
+  });
+
+  it('emits the clicked section id only when interactive', () => {
+    setup();
+    fixture.componentRef.setInput('interactive', true);
+    fixture.detectChanges();
+
+    const emitted: string[] = [];
+    fixture.componentInstance.sectionSelected.subscribe((id) => emitted.push(id));
+
+    const slot = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.cv-section-slot')!;
+    slot.click();
+    expect(emitted).toEqual(['summary']);
+  });
+
+  it('highlights the section matching selectedSectionId only when interactive', () => {
+    setup();
+    // OnPush + a bare-fixture root won't re-check on a plain field
+    // mutation (nothing marks the view dirty) - setInput is the
+    // supported way to simulate a real parent-driven @Input change.
+    fixture.componentRef.setInput('interactive', true);
+    fixture.componentRef.setInput('selectedSectionId', 'summary');
+    fixture.detectChanges();
+
+    const slot = (fixture.nativeElement as HTMLElement).querySelector('.cv-section-slot');
+    expect(slot?.getAttribute('data-selected')).toBe('true');
+  });
 });

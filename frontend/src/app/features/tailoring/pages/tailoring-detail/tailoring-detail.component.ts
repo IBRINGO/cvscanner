@@ -7,6 +7,8 @@ import { CVSCANNER_ICONS } from '../../../../core/icons';
 import { ApplicationProgressComponent } from '../../../../shared/components/ui/application-progress/application-progress.component';
 import { ScoreGaugeComponent } from '../../../../shared/components/ui/score-gauge/score-gauge.component';
 import { pollUntilDone } from '../../../../shared/utils/polling';
+import { AnalysisApiService } from '../../../analysis/services/analysis-api.service';
+import { ApplicationSessionService } from '../../../applications/services/application-session.service';
 import { TailoringDiffComponent } from '../../components/tailoring-diff/tailoring-diff.component';
 import { TailoringPlanDetail, TailoringStatus } from '../../models/tailoring.model';
 import { TailoringApiService } from '../../services/tailoring-api.service';
@@ -117,6 +119,22 @@ const STAGE_LABELS: Record<TailoringStatus, string> = {
             }
           </section>
 
+          @if (cvId(); as id) {
+            <section class="tailoring-detail__next">
+              <div>
+                <h2>Ready to design the final document</h2>
+                <p class="text-secondary">
+                  Choose a template and fine-tune the layout - the editor opens with these accepted
+                  changes already applied.
+                </p>
+              </div>
+              <a [routerLink]="['/cvs', id, 'editor']" [queryParams]="{ tailoringId: detail.id }" class="tailoring-detail__continue">
+                Continue to templates &amp; CV editor
+                <ng-icon name="lucideArrowUpRight" size="15" />
+              </a>
+            </section>
+          }
+
           <p class="tailoring-detail__footer text-tertiary font-mono">
             {{ detail.mode === 'CONSERVATIVE' ? 'Conservative' : 'Aggressive but safe' }} mode - completed
             {{ detail.completed_at | date: 'medium' }}
@@ -225,6 +243,35 @@ const STAGE_LABELS: Record<TailoringStatus, string> = {
         gap: var(--space-2);
         color: var(--ink-secondary);
       }
+      .tailoring-detail__next {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-5);
+        flex-wrap: wrap;
+        padding: var(--space-5);
+        background: var(--accent-tint);
+        border-radius: var(--radius-lg);
+      }
+      .tailoring-detail__next h2 {
+        margin-bottom: var(--space-1);
+      }
+      .tailoring-detail__continue {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        font-size: var(--text-sm);
+        padding: var(--space-3) var(--space-5);
+        border-radius: var(--radius-sm);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .tailoring-detail__continue:hover {
+        background: var(--accent-strong);
+      }
       .tailoring-detail__footer {
         font-size: var(--text-xs);
       }
@@ -240,6 +287,7 @@ export class TailoringDetailComponent implements OnInit {
   protected readonly status = signal<TailoringStatus | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly plan = signal<TailoringPlanDetail | null>(null);
+  protected readonly cvId = signal<string | null>(null);
   protected readonly stageOrder = STAGE_ORDER;
   protected readonly stageLabels = STAGE_LABELS;
 
@@ -253,13 +301,21 @@ export class TailoringDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
 
-  constructor(private readonly tailoringApi: TailoringApiService) {}
+  constructor(
+    private readonly tailoringApi: TailoringApiService,
+    private readonly analysisApi: AnalysisApiService,
+    private readonly session: ApplicationSessionService,
+  ) {}
 
   ngOnInit(): void {
     const planId = this.route.snapshot.paramMap.get('id');
     if (!planId) return;
 
-    this.tailoringApi.getPlan(planId).subscribe((summary) => this.plan.set(summary));
+    this.session.setTailoring(planId);
+    this.tailoringApi.getPlan(planId).subscribe((summary) => {
+      this.plan.set(summary);
+      this.loadCvId(summary.analysis_id);
+    });
 
     pollUntilDone(
       () => this.tailoringApi.getStatus(planId),
@@ -273,6 +329,13 @@ export class TailoringDetailComponent implements OnInit {
           this.tailoringApi.getPlan(planId).subscribe((full) => this.plan.set(full));
         }
       });
+  }
+
+  private loadCvId(analysisId: string): void {
+    this.analysisApi.getAnalysis(analysisId).subscribe((analysis) => {
+      this.session.setAnalysis(analysisId);
+      this.cvId.set(analysis.candidate_document_id);
+    });
   }
 
   isDone(): boolean {

@@ -67,6 +67,24 @@
   gap: 20px;
 }
 
+// The click/select affordance used by the editor's document-first
+// editing (interactive="true" only) - never shown in read-only
+// contexts like the template gallery or a tailoring preview.
+.cv-section-slot[data-interactive='true'] {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 0 -8px;
+  transition: background-color var(--motion-fast) var(--motion-ease), box-shadow var(--motion-fast) var(--motion-ease);
+}
+.cv-section-slot[data-interactive='true']:hover {
+  background: rgba(37, 99, 235, 0.05);
+}
+.cv-section-slot[data-selected='true'] {
+  background: rgba(37, 99, 235, 0.07);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
 .cv-section h2 {
   font-size: 0.78rem;
   font-weight: 700;

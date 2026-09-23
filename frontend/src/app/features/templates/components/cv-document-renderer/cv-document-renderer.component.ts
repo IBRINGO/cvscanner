@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CandidateProfile } from '../../../cvs/models/candidate-profile.model';
 import {
   CvSectionRef,
@@ -36,19 +36,40 @@ import { TemplateDefinition } from '../../models/template-definition.model';
         <div class="cv-page__body cv-page__body--split">
           <aside class="cv-page__sidebar">
             @for (ref of sidebarSections(); track ref.id) {
-              <ng-container *ngTemplateOutlet="section; context: { $implicit: ref }" />
+              <div
+                class="cv-section-slot"
+                [attr.data-interactive]="interactive"
+                [attr.data-selected]="interactive && ref.id === selectedSectionId"
+                (click)="onSectionClick(ref.id)"
+              >
+                <ng-container *ngTemplateOutlet="section; context: { $implicit: ref }" />
+              </div>
             }
           </aside>
           <div class="cv-page__main">
             @for (ref of mainSections(); track ref.id) {
-              <ng-container *ngTemplateOutlet="section; context: { $implicit: ref }" />
+              <div
+                class="cv-section-slot"
+                [attr.data-interactive]="interactive"
+                [attr.data-selected]="interactive && ref.id === selectedSectionId"
+                (click)="onSectionClick(ref.id)"
+              >
+                <ng-container *ngTemplateOutlet="section; context: { $implicit: ref }" />
+              </div>
             }
           </div>
         </div>
       } @else {
         <div class="cv-page__body">
           @for (ref of visibleSections(); track ref.id) {
-            <ng-container *ngTemplateOutlet="section; context: { $implicit: ref }" />
+            <div
+              class="cv-section-slot"
+              [attr.data-interactive]="interactive"
+              [attr.data-selected]="interactive && ref.id === selectedSectionId"
+              (click)="onSectionClick(ref.id)"
+            >
+              <ng-container *ngTemplateOutlet="section; context: { $implicit: ref }" />
+            </div>
           }
         </div>
       }
@@ -185,8 +206,20 @@ export class CvDocumentRendererComponent {
   @Input({ required: true }) sectionOrder!: CvSectionRef[];
   @Input() hiddenSectionIds: string[] = [];
   @Input({ required: true }) template!: TemplateDefinition;
+  /** When true, sections are clickable and the selected one is
+   * highlighted - used by the CV editor so a candidate can select a
+   * section directly on the rendered document, not only from a side
+   * list. Read-only contexts (template gallery, tailoring preview)
+   * leave this false so nothing there looks clickable. */
+  @Input() interactive = false;
+  @Input() selectedSectionId: string | null = null;
+  @Output() sectionSelected = new EventEmitter<string>();
 
   protected readonly SECTION_LABELS = SECTION_LABELS;
+
+  onSectionClick(id: string): void {
+    if (this.interactive) this.sectionSelected.emit(id);
+  }
 
   formatEnumLabel(value: string | null | undefined): string {
     return formatEnumLabel(value);

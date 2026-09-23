@@ -13,6 +13,7 @@ import { AnalysisApiService } from '../../../analysis/services/analysis-api.serv
 import { CvApiService } from '../../../cvs/services/cv-api.service';
 import { JobApiService } from '../../../jobs/services/job-api.service';
 import { pollUntilDone } from '../../../../shared/utils/polling';
+import { ApplicationSessionService } from '../../services/application-session.service';
 
 type JourneyStep = 'cv' | 'job';
 type InputMode = 'text' | 'file';
@@ -352,6 +353,7 @@ export class NewApplicationComponent implements OnDestroy {
     private readonly jobApi: JobApiService,
     private readonly analysisApi: AnalysisApiService,
     private readonly router: Router,
+    private readonly session: ApplicationSessionService,
   ) {}
 
   ngOnDestroy(): void {
@@ -369,6 +371,7 @@ export class NewApplicationComponent implements OnDestroy {
         this.cvUploading.set(false);
         this.cvDocument.set(document);
         this.cvStatus.set(document.status);
+        this.session.start(document.id);
         this.pollCvStatus(document.id);
       },
       error: () => {
@@ -427,7 +430,10 @@ export class NewApplicationComponent implements OnDestroy {
     this.creatingAnalysis.set(true);
     this.progressStage.set('analysis');
     this.analysisApi.createAnalysis(cv.id, job.id).subscribe({
-      next: (analysis) => this.router.navigate(['/analysis', analysis.id]),
+      next: (analysis) => {
+        this.session.setAnalysis(analysis.id);
+        this.router.navigate(['/analysis', analysis.id]);
+      },
       error: () => {
         this.creatingAnalysis.set(false);
         this.analysisError.set('Starting the analysis failed. Please try again.');
@@ -439,6 +445,7 @@ export class NewApplicationComponent implements OnDestroy {
     this.jobSubmitting.set(false);
     this.jobDocument.set(document);
     this.jobStatus.set(document.status);
+    this.session.setJob(document.id);
     this.pollJobStatus(document.id);
   }
 
