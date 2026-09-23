@@ -1,62 +1,89 @@
 // CVScanner design tokens.
 //
-// Design read: a career intelligence workspace, not a generic admin
-// dashboard - editorial, precise, data-oriented, human. One accent color
-// (terracotta) used identically everywhere; status colors are a
-// separate, small palette reserved for document processing state and
-// must never be reused to imply skill/requirement compatibility (there
-// is no matching engine yet - see docs/architecture/phase-2-pipeline.md).
+// Design read: a document-centric career intelligence workspace built
+// around precision and measurement, not a generic admin dashboard and
+// not an "editorial" reading product. One confident brand accent (a
+// deep signal blue) drives primary actions and active/in-progress
+// states; a small, decoupled semantic palette (positive/attention/
+// negative/inferred) carries evaluation outcomes so the brand color
+// never has to double as a warning color. Documents (CVs, job offers)
+// get their own "paper" surface family, distinct from app chrome, so
+// they read as real documents rather than UI panels.
 //
-// Shape strategy: mostly-sharp surfaces (radius-sm/md) with radius-pill
-// reserved for small status/skill chips only - see the Shape
-// Consistency Lock note below each variable is used.
+// Shape strategy: mostly-sharp surfaces (radius-sm/md/lg) with
+// radius-pill reserved for small status/skill chips only - keep this
+// lock everywhere a new radius value is used.
 
 :root {
-  // ---- Neutrals (cool slate, not warm cream/beige) ----
-  --surface-base: #f4f5f6;
+  // ---- Neutrals (cool graphite, not warm cream/beige) ----
+  --surface-base: #eef0f3;
   --surface-raised: #ffffff;
-  --surface-sunken: #ebedf0;
-  --border-subtle: #dee1e5;
-  --border-strong: #c3c8cf;
-  --ink-primary: #1a1c20;
-  --ink-secondary: #565b63;
-  --ink-tertiary: #868c94;
+  --surface-sunken: #e2e5ea;
+  --border-subtle: #d7dbe1;
+  --border-strong: #b7bfca;
+  --ink-primary: #12151a;
+  --ink-secondary: #4b5563;
+  --ink-tertiary: #7c8695;
 
-  // ---- Accent (terracotta - the ONE accent color, used everywhere) ----
-  --accent: #b8492a;
-  --accent-strong: #963c22;
-  --accent-tint: #f6e6e1;
+  // ---- Document/paper surfaces (CV and job document previews only -
+  // never used for app chrome, so a document always visually reads as
+  // a real piece of paper sitting inside the workspace) ----
+  --paper-surface: #fdfcfa;
+  --paper-border: #e3ded2;
+  --paper-ink: #1b1a17;
+  --paper-ink-secondary: #5c584f;
+  --shadow-document: 0 1px 2px rgba(18, 21, 26, 0.06), 0 12px 28px rgba(18, 21, 26, 0.1);
 
-  // ---- Status (document processing lifecycle only - never used for
-  // skill/requirement compatibility) ----
-  --status-uploaded: #868c94;
-  --status-processing: #b8492a;
-  --status-processed: #2f6b46;
-  --status-processed-tint: #e5f0e8;
-  --status-failed: #a23b2e;
-  --status-failed-tint: #f7e6e3;
+  // ---- Accent (one brand color - deep signal blue - used identically
+  // for every primary action and for "actively processing" states) ----
+  --accent: #2454e0;
+  --accent-strong: #1b3fb0;
+  --accent-tint: #e4eafc;
 
-  // ---- Match state (Phase 4: requirement evaluation outcomes only -
-  // a separate semantic system from document status above, but sharing
-  // the same underlying hues on purpose: green always means "resolved
-  // well", terracotta always means "needs attention", everywhere in the
-  // product. "Semantic/inferred" gets its own cool, distinct hue - it is
-  // never a green/terracotta/red "verdict", only a labelled inference. ----
-  --match-positive: var(--status-processed);
-  --match-positive-tint: var(--status-processed-tint);
-  --match-attention: var(--accent);
-  --match-attention-tint: var(--accent-tint);
-  --match-negative: var(--status-failed);
-  --match-negative-tint: var(--status-failed-tint);
-  --match-neutral: var(--ink-tertiary);
-  --match-neutral-tint: var(--surface-sunken);
-  --match-semantic: #3d6b7a;
-  --match-semantic-tint: #e3edf0;
+  // ---- Semantic outcomes (decoupled from the brand accent on purpose:
+  // blue means "primary action" everywhere, so it must never also mean
+  // "warning". This is the one system used for match/requirement
+  // outcomes AND document processing state, so a color always means
+  // the same thing everywhere in the product.) ----
+  --positive: #197a4b;
+  --positive-tint: #e2f3e9;
+  --attention: #b45309;
+  --attention-tint: #faf0e1;
+  --negative: #b3261e;
+  --negative-tint: #f9e6e4;
+  --neutral: var(--ink-tertiary);
+  --neutral-tint: var(--surface-sunken);
+  --inferred: #0e7c86;
+  --inferred-tint: #e1f1f2;
+
+  // ---- Document processing lifecycle (maps onto the semantic system
+  // above: uploaded = neutral, processing = accent, processed =
+  // positive, failed = negative) ----
+  --status-uploaded: var(--neutral);
+  --status-processing: var(--accent);
+  --status-processed: var(--positive);
+  --status-processed-tint: var(--positive-tint);
+  --status-failed: var(--negative);
+  --status-failed-tint: var(--negative-tint);
+
+  // ---- Match state (requirement evaluation outcomes - same palette as
+  // above, aliased for call-site clarity) ----
+  --match-positive: var(--positive);
+  --match-positive-tint: var(--positive-tint);
+  --match-attention: var(--attention);
+  --match-attention-tint: var(--attention-tint);
+  --match-negative: var(--negative);
+  --match-negative-tint: var(--negative-tint);
+  --match-neutral: var(--neutral);
+  --match-neutral-tint: var(--neutral-tint);
+  --match-semantic: var(--inferred);
+  --match-semantic-tint: var(--inferred-tint);
 
   // ---- Radius (Shape Consistency Lock: sharp-ish structural surfaces,
   // pill reserved for small status/skill chips) ----
   --radius-sm: 3px;
   --radius-md: 6px;
+  --radius-lg: 12px;
   --radius-pill: 999px;
 
   // ---- Spacing scale ----
@@ -69,84 +96,125 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  // ---- Motion (MOTION_INTENSITY: 4 - fluid CSS, no scroll choreography) ----
+  // ---- Motion ----
   --motion-fast: 120ms;
   --motion-base: 200ms;
   --motion-slow: 360ms;
   --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  // Reserved for one-time reveal moments (score gauge fill, success
+  // confirmations) - not for routine hovers/transitions.
+  --motion-reveal: 900ms;
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  // ---- Elevation (borders over shadows - "avoid excessive shadows") ----
-  --shadow-overlay: 0 8px 24px rgba(26, 28, 32, 0.12);
+  // ---- Elevation (borders over shadows for UI chrome; --shadow-document
+  // above is the one deliberate exception, reserved for paper surfaces) ----
+  --shadow-overlay: 0 8px 24px rgba(18, 21, 26, 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --surface-base: #17181b;
-    --surface-raised: #1f2124;
-    --surface-sunken: #101113;
-    --border-subtle: #303338;
-    --border-strong: #45484e;
-    --ink-primary: #f1f1f0;
-    --ink-secondary: #b5b8bd;
-    --ink-tertiary: #82868d;
+    --surface-base: #14161a;
+    --surface-raised: #1c1f24;
+    --surface-sunken: #0e0f12;
+    --border-subtle: #2c3038;
+    --border-strong: #454b56;
+    --ink-primary: #f1f2f4;
+    --ink-secondary: #b3b9c4;
+    --ink-tertiary: #7e8592;
 
-    --accent: #e07152;
-    --accent-strong: #ee8b6f;
-    --accent-tint: #3a221c;
+    // Documents stay paper-like even in dark mode - the workspace
+    // chrome goes dark, the page itself does not.
+    --paper-surface: #f7f5f1;
+    --paper-border: #ddd7c9;
+    --paper-ink: #1b1a17;
+    --paper-ink-secondary: #5c584f;
+    --shadow-document: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.45);
 
-    --status-uploaded: #82868d;
-    --status-processing: #e07152;
-    --status-processed: #6bc48b;
-    --status-processed-tint: #1c2f21;
-    --status-failed: #e0796a;
-    --status-failed-tint: #3a221e;
+    --accent: #6d94ff;
+    --accent-strong: #9db4ff;
+    --accent-tint: #1c2440;
 
-    --match-positive: var(--status-processed);
-    --match-positive-tint: var(--status-processed-tint);
-    --match-attention: var(--accent);
-    --match-attention-tint: var(--accent-tint);
-    --match-negative: var(--status-failed);
-    --match-negative-tint: var(--status-failed-tint);
-    --match-neutral: var(--ink-tertiary);
-    --match-neutral-tint: var(--surface-sunken);
-    --match-semantic: #7fb3c2;
-    --match-semantic-tint: #1c2b2e;
+    --positive: #4fbf82;
+    --positive-tint: #12281c;
+    --attention: #e0a544;
+    --attention-tint: #332413;
+    --negative: #e2685f;
+    --negative-tint: #351d1b;
+    --neutral: var(--ink-tertiary);
+    --neutral-tint: var(--surface-sunken);
+    --inferred: #5bc2cc;
+    --inferred-tint: #12292b;
 
-    --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --status-uploaded: var(--neutral);
+    --status-processing: var(--accent);
+    --status-processed: var(--positive);
+    --status-processed-tint: var(--positive-tint);
+    --status-failed: var(--negative);
+    --status-failed-tint: var(--negative-tint);
+
+    --match-positive: var(--positive);
+    --match-positive-tint: var(--positive-tint);
+    --match-attention: var(--attention);
+    --match-attention-tint: var(--attention-tint);
+    --match-negative: var(--negative);
+    --match-negative-tint: var(--negative-tint);
+    --match-neutral: var(--neutral);
+    --match-neutral-tint: var(--neutral-tint);
+    --match-semantic: var(--inferred);
+    --match-semantic-tint: var(--inferred-tint);
+
+    --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.5);
   }
 }
 
 :root[data-theme='dark'] {
-  --surface-base: #17181b;
-  --surface-raised: #1f2124;
-  --surface-sunken: #101113;
-  --border-subtle: #303338;
-  --border-strong: #45484e;
-  --ink-primary: #f1f1f0;
-  --ink-secondary: #b5b8bd;
-  --ink-tertiary: #82868d;
+  --surface-base: #14161a;
+  --surface-raised: #1c1f24;
+  --surface-sunken: #0e0f12;
+  --border-subtle: #2c3038;
+  --border-strong: #454b56;
+  --ink-primary: #f1f2f4;
+  --ink-secondary: #b3b9c4;
+  --ink-tertiary: #7e8592;
 
-  --accent: #e07152;
-  --accent-strong: #ee8b6f;
-  --accent-tint: #3a221c;
+  --paper-surface: #f7f5f1;
+  --paper-border: #ddd7c9;
+  --paper-ink: #1b1a17;
+  --paper-ink-secondary: #5c584f;
+  --shadow-document: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.45);
 
-  --status-uploaded: #82868d;
-  --status-processing: #e07152;
-  --status-processed: #6bc48b;
-  --status-processed-tint: #1c2f21;
-  --status-failed: #e0796a;
-  --status-failed-tint: #3a221e;
+  --accent: #6d94ff;
+  --accent-strong: #9db4ff;
+  --accent-tint: #1c2440;
 
-  --match-positive: var(--status-processed);
-  --match-positive-tint: var(--status-processed-tint);
-  --match-attention: var(--accent);
-  --match-attention-tint: var(--accent-tint);
-  --match-negative: var(--status-failed);
-  --match-negative-tint: var(--status-failed-tint);
-  --match-neutral: var(--ink-tertiary);
-  --match-neutral-tint: var(--surface-sunken);
-  --match-semantic: #7fb3c2;
-  --match-semantic-tint: #1c2b2e;
+  --positive: #4fbf82;
+  --positive-tint: #12281c;
+  --attention: #e0a544;
+  --attention-tint: #332413;
+  --negative: #e2685f;
+  --negative-tint: #351d1b;
+  --neutral: var(--ink-tertiary);
+  --neutral-tint: var(--surface-sunken);
+  --inferred: #5bc2cc;
+  --inferred-tint: #12292b;
 
-  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --status-uploaded: var(--neutral);
+  --status-processing: var(--accent);
+  --status-processed: var(--positive);
+  --status-processed-tint: var(--positive-tint);
+  --status-failed: var(--negative);
+  --status-failed-tint: var(--negative-tint);
+
+  --match-positive: var(--positive);
+  --match-positive-tint: var(--positive-tint);
+  --match-attention: var(--attention);
+  --match-attention-tint: var(--attention-tint);
+  --match-negative: var(--negative);
+  --match-negative-tint: var(--negative-tint);
+  --match-neutral: var(--neutral);
+  --match-neutral-tint: var(--neutral-tint);
+  --match-semantic: var(--inferred);
+  --match-semantic-tint: var(--inferred-tint);
+
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.5);
 }

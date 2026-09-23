@@ -24,6 +24,17 @@
   border-radius: var(--radius-md);
 }
 
+// A CV or job document rendered as a real piece of paper, distinct from
+// app-chrome panels (surface-panel above). Used by document-preview and
+// the CV document renderer - never for ordinary UI containers.
+@mixin paper-surface {
+  background: var(--paper-surface);
+  border: 1px solid var(--paper-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-document);
+  color: var(--paper-ink);
+}
+
 @mixin pill($bg, $fg) {
   display: inline-flex;
   align-items: center;
