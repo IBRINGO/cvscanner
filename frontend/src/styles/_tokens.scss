@@ -36,6 +36,23 @@
   --status-failed: #a23b2e;
   --status-failed-tint: #f7e6e3;
 
+  // ---- Match state (Phase 4: requirement evaluation outcomes only -
+  // a separate semantic system from document status above, but sharing
+  // the same underlying hues on purpose: green always means "resolved
+  // well", terracotta always means "needs attention", everywhere in the
+  // product. "Semantic/inferred" gets its own cool, distinct hue - it is
+  // never a green/terracotta/red "verdict", only a labelled inference. ----
+  --match-positive: var(--status-processed);
+  --match-positive-tint: var(--status-processed-tint);
+  --match-attention: var(--accent);
+  --match-attention-tint: var(--accent-tint);
+  --match-negative: var(--status-failed);
+  --match-negative-tint: var(--status-failed-tint);
+  --match-neutral: var(--ink-tertiary);
+  --match-neutral-tint: var(--surface-sunken);
+  --match-semantic: #3d6b7a;
+  --match-semantic-tint: #e3edf0;
+
   // ---- Radius (Shape Consistency Lock: sharp-ish structural surfaces,
   // pill reserved for small status/skill chips) ----
   --radius-sm: 3px;
@@ -84,6 +101,17 @@
     --status-failed: #e0796a;
     --status-failed-tint: #3a221e;
 
+    --match-positive: var(--status-processed);
+    --match-positive-tint: var(--status-processed-tint);
+    --match-attention: var(--accent);
+    --match-attention-tint: var(--accent-tint);
+    --match-negative: var(--status-failed);
+    --match-negative-tint: var(--status-failed-tint);
+    --match-neutral: var(--ink-tertiary);
+    --match-neutral-tint: var(--surface-sunken);
+    --match-semantic: #7fb3c2;
+    --match-semantic-tint: #1c2b2e;
+
     --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
   }
 }
@@ -108,6 +136,17 @@
   --status-processed-tint: #1c2f21;
   --status-failed: #e0796a;
   --status-failed-tint: #3a221e;
+
+  --match-positive: var(--status-processed);
+  --match-positive-tint: var(--status-processed-tint);
+  --match-attention: var(--accent);
+  --match-attention-tint: var(--accent-tint);
+  --match-negative: var(--status-failed);
+  --match-negative-tint: var(--status-failed-tint);
+  --match-neutral: var(--ink-tertiary);
+  --match-neutral-tint: var(--surface-sunken);
+  --match-semantic: #7fb3c2;
+  --match-semantic-tint: #1c2b2e;
 
   --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
 }

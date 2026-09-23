@@ -48,6 +48,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'analysis/:id',
+        loadComponent: () =>
+          import('./features/analysis/pages/analysis-detail/analysis-detail.component').then(
+            (m) => m.AnalysisDetailComponent,
+          ),
+      },
+      {
         path: 'recommendations',
         loadComponent: () =>
           import(
