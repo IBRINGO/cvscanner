@@ -44,6 +44,8 @@ from infrastructure.document_processing.extraction.job_extractor import RuleBase
 from infrastructure.document_processing.parsers.registry import DocumentParserRegistry
 from infrastructure.embeddings.base import EmbeddingProvider
 from infrastructure.embeddings.providers.fake_provider import FakeEmbeddingProvider
+from infrastructure.embeddings.providers.fallback_provider import FallbackEmbeddingProvider
+from infrastructure.embeddings.providers.gemini_provider import GeminiEmbeddingProvider
 from infrastructure.embeddings.providers.openai_provider import OpenAIEmbeddingProvider
 from infrastructure.storage.local import LocalFileStorage
 
@@ -69,15 +71,29 @@ def build_parse_document() -> ParseDocument:
 
 
 def build_embedding_provider() -> EmbeddingProvider:
-    """Embeddings are optional (Phase 3 section 25) - falls back to the
-    deterministic, network-free FakeEmbeddingProvider whenever
-    OPENAI_API_KEY is not configured, so the whole pipeline stays fully
-    testable and usable without any external service or API key.
+    """Embeddings are optional (Phase 3 section 25, Phase 4 section 29).
+    Gemini is the primary provider, OpenAI the fallback - if
+    GEMINI_API_KEY fails, or is not configured, OpenAI is tried; if
+    neither key is configured (or both fail), the deterministic,
+    network-free FakeEmbeddingProvider keeps the pipeline fully usable
+    without any external service.
     """
-    api_key = getattr(settings, "OPENAI_API_KEY", "")
-    if api_key:
-        return OpenAIEmbeddingProvider(api_key=api_key, model=settings.EMBEDDING_MODEL)
-    return FakeEmbeddingProvider()
+    real_providers: list[EmbeddingProvider] = []
+
+    gemini_key = getattr(settings, "GEMINI_API_KEY", "")
+    if gemini_key:
+        gemini = GeminiEmbeddingProvider(api_key=gemini_key, model=settings.GEMINI_EMBEDDING_MODEL)
+        real_providers.append(gemini)
+
+    openai_key = getattr(settings, "OPENAI_API_KEY", "")
+    if openai_key:
+        real_providers.append(OpenAIEmbeddingProvider(api_key=openai_key, model=settings.EMBEDDING_MODEL))
+
+    if not real_providers:
+        return FakeEmbeddingProvider()
+    if len(real_providers) == 1:
+        return real_providers[0]
+    return FallbackEmbeddingProvider(real_providers)
 
 
 def build_technology_scanner() -> TechnologyMentionScanner:

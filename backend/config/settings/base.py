@@ -155,11 +155,15 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
 # ---------------------------------------------------------------------------
-# Embeddings (Phase 3) — optional. Absence of an API key is not an error;
-# config/container.py falls back to FakeEmbeddingProvider (deterministic,
-# no network) whenever OPENAI_API_KEY is unset. See section 25/26 of the
-# Phase 3 brief and infrastructure/embeddings/.
+# Embeddings (Phase 3, extended in Phase 4) - optional. Absence of both
+# API keys is not an error; config/container.py falls back to
+# FakeEmbeddingProvider (deterministic, no network) whenever neither
+# GEMINI_API_KEY nor OPENAI_API_KEY is set. Gemini is the primary
+# provider, OpenAI the fallback - see docs/architecture/phase-4-matching.md
+# and infrastructure/embeddings/.
 # ---------------------------------------------------------------------------
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+GEMINI_EMBEDDING_MODEL = env("GEMINI_EMBEDDING_MODEL", default="gemini-embedding-2")
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 EMBEDDING_MODEL = env("EMBEDDING_MODEL", default="text-embedding-3-small")
 
