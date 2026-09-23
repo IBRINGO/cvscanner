@@ -261,6 +261,12 @@ import { TailoringApiService } from '../../../tailoring/services/tailoring-api.s
                   </li>
                 }
               </ul>
+              <div class="editor__add-row">
+                <input #newSkill type="text" placeholder="Add a skill" (keydown.enter)="addSkill(newSkill.value); newSkill.value = ''" />
+                <button type="button" (click)="addSkill(newSkill.value); newSkill.value = ''">
+                  <ng-icon name="lucidePlus" size="14" />
+                </button>
+              </div>
             }
             @case ('certifications') {
               <ul class="editor__chip-list">
@@ -273,6 +279,12 @@ import { TailoringApiService } from '../../../tailoring/services/tailoring-api.s
                   </li>
                 }
               </ul>
+              <div class="editor__add-row">
+                <input #newCert type="text" placeholder="Add a certification" (keydown.enter)="addCertification(newCert.value); newCert.value = ''" />
+                <button type="button" (click)="addCertification(newCert.value); newCert.value = ''">
+                  <ng-icon name="lucidePlus" size="14" />
+                </button>
+              </div>
             }
             @case ('languages') {
               <ul class="editor__chip-list">
@@ -285,6 +297,12 @@ import { TailoringApiService } from '../../../tailoring/services/tailoring-api.s
                   </li>
                 }
               </ul>
+              <div class="editor__add-row">
+                <input #newLang type="text" placeholder="Add a language" (keydown.enter)="addLanguage(newLang.value); newLang.value = ''" />
+                <button type="button" (click)="addLanguage(newLang.value); newLang.value = ''">
+                  <ng-icon name="lucidePlus" size="14" />
+                </button>
+              </div>
             }
             @case ('custom') {
               <label class="editor__field">
@@ -556,6 +574,43 @@ export class CvEditorComponent implements OnInit {
       projects[index] = { ...projects[index], [field]: value };
       return { ...p, projects };
     });
+  }
+
+  addSkill(rawText: string): void {
+    const value = rawText.trim();
+    if (!value) return;
+    this.pushHistory();
+    this.profile.update((p) =>
+      p ? { ...p, skills: [...p.skills, { raw_text: value, skill: null, evidence: null }] } : p,
+    );
+  }
+
+  addCertification(name: string): void {
+    const value = name.trim();
+    if (!value) return;
+    this.pushHistory();
+    this.profile.update((p) =>
+      p
+        ? { ...p, certifications: [...p.certifications, { name: value, issuer: null, date_raw: null, evidence: null }] }
+        : p,
+    );
+  }
+
+  addLanguage(name: string): void {
+    const value = name.trim();
+    if (!value) return;
+    this.pushHistory();
+    this.profile.update((p) =>
+      p
+        ? {
+            ...p,
+            languages: [
+              ...p.languages,
+              { name: value, proficiency: null, canonical_name: null, proficiency_normalized: null },
+            ],
+          }
+        : p,
+    );
   }
 
   removeListItem(list: 'skills' | 'certifications' | 'languages' | 'projects', index: number): void {

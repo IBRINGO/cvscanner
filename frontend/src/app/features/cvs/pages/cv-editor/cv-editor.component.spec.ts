@@ -247,6 +247,24 @@ describe('CvEditorComponent', () => {
     expect(component.profile()?.projects.length).toBe(1);
   });
 
+  it('adds a new skill, certification and language from free text, ignoring blank input', () => {
+    setup();
+    component.addSkill('  ');
+    expect(component.profile()?.skills.length).toBe(2);
+
+    component.addSkill('Kubernetes');
+    expect(component.profile()?.skills.length).toBe(3);
+    expect(component.profile()?.skills[2].raw_text).toBe('Kubernetes');
+
+    component.addCertification('AWS Certified Developer');
+    expect(component.profile()?.certifications.length).toBe(1);
+    expect(component.profile()?.certifications[0].name).toBe('AWS Certified Developer');
+
+    component.addLanguage('Spanish');
+    expect(component.profile()?.languages.length).toBe(1);
+    expect(component.profile()?.languages[0].name).toBe('Spanish');
+  });
+
   it('preselects the template requested via the ?template= query param', () => {
     setup({ queryParams: { template: 'modern-split' } });
     expect(component.templateId()).toBe('modern-split');
