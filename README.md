@@ -7,18 +7,22 @@ requirements, produces an explainable score, and recommends improvements
 (including, eventually, a tailored CV with claims validated against
 evidence).
 
-**This repository is at Phase 4: Evidence-Aware Hybrid ATS Matching
-Engine.** CVs and job offers can be uploaded, parsed, and structured into
-evidence-backed profiles with normalized skills (Phase 2), enriched with
-skill relationships, normalized seniority/education/language, and an
-optional embedding foundation (Phase 3). Phase 4 adds the actual
-candidate-job matching: a hybrid lexical/alias/ontology/semantic engine
-across eight dimensions (skills, experience, seniority, education,
-certifications, languages, responsibilities, domain alignment), a
-deterministic and versioned scoring engine, structured gap detection,
-and an analysis workspace in the frontend. Recommendations, CV
-tailoring, and claim validation are not implemented yet - see
-[Roadmap](#roadmap) and [Known limitations](#known-limitations).
+**This repository is at Phase 5: Evidence-Backed Recommendations and CV
+Tailoring.** CVs and job offers can be uploaded, parsed, and structured
+into evidence-backed profiles with normalized skills (Phase 2), enriched
+with skill relationships and normalized seniority/education/language
+(Phase 3), and matched against a job through a hybrid lexical/alias/
+ontology/semantic engine with a deterministic, versioned score and
+structured gaps (Phase 4). Phase 5 turns those gaps into deterministic,
+evidence-backed recommendations, and lets a candidate generate a
+tailored CV - reordering, normalizing, and (optionally) LLM-assisted
+rephrasing - with every generated claim independently checked by a
+Truth Layer before it can appear, and the tailored result re-scored
+through the same Phase 4 engine. Nothing outside a candidate's verified
+experience is ever added. See [Roadmap](#roadmap) and
+[Known limitations](#known-limitations) for what is deliberately still
+out of scope (recommendations beyond text, cover letters, CV rewriting
+beyond wording, ranking).
 
 ## Architecture
 
@@ -198,6 +202,12 @@ shape (`document_type` scoped):
 | GET    | `/api/v1/analyses/`         | List analyses |
 | GET    | `/api/v1/analyses/{id}/`    | Full analysis: score breakdown, requirement evaluations, gaps |
 | GET    | `/api/v1/analyses/{id}/status/` | Processing status + error (if failed) |
+| GET    | `/api/v1/analyses/{id}/recommendations/` | Deterministic, evidence-backed recommendations for a completed analysis |
+| POST   | `/api/v1/tailoring/`        | Create a tailoring plan for selected recommendations; queues generation |
+| GET    | `/api/v1/tailoring/`        | List tailoring plans |
+| GET    | `/api/v1/tailoring/{id}/`   | Full plan: operations, before/after scores, requirement deltas, changes |
+| GET    | `/api/v1/tailoring/{id}/status/` | Processing status + error (if failed) |
+| GET    | `/api/v1/tailoring/{id}/changes/` | The tailored changes and their diffs only |
 
 `CandidateProfile`/`JobProfile` responses carry Phase 3's normalized
 fields alongside the Phase 2 raw ones: `Experience.seniority`,
@@ -208,7 +218,8 @@ fields alongside the Phase 2 raw ones: `Experience.seniority`,
 See [docs/api/README.md](docs/api/README.md),
 [docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md),
 [docs/architecture/phase-3-semantics.md](docs/architecture/phase-3-semantics.md),
-and [docs/architecture/phase-4-matching.md](docs/architecture/phase-4-matching.md)
+[docs/architecture/phase-4-matching.md](docs/architecture/phase-4-matching.md),
+and [docs/architecture/phase-5-recommendations-and-tailoring.md](docs/architecture/phase-5-recommendations-and-tailoring.md)
 for the full pipeline and response shapes.
 
 ## Backend
@@ -216,9 +227,9 @@ for the full pipeline and response shapes.
 Django + Django REST Framework, organized as a modular monolith:
 
 - `config/` - settings (`base` / `development` / `testing` / `production`), root URLs, WSGI/ASGI, and `container.py` (the composition root - see the dependency-rule doc).
-- `apps/` - Django app configs + persistence models. `documents` (Document, Evidence), `candidates` (CandidateProfile + parts, now with Phase 3 normalized fields), `jobs` (JobProfile, JobRequirement, same extension), `skills` (Skill, SkillAlias, SkillRelation, seeded taxonomy), `semantics` (SemanticRepresentation), and `analyses` (Analysis, RequirementEvaluationRecord - Phase 4) are implemented; `users`, `recommendations`, `tailoring`, `audit` remain boundaries for later phases.
-- `domain/`, `application/`, `infrastructure/`, `interfaces/` - the Clean Architecture layers; see the dependency-rule doc linked above and each layer's own `README.md` for what is implemented vs. reserved. `domain/matching/` (Phase 4) is the hybrid matching engine itself - pure Python, no framework imports.
-- `workers/` - Celery app, an infrastructure smoke-test task (`ping`), `process_cv_document`/`process_job_document` (the document processing pipeline), and `run_analysis` (Phase 4's matching task).
+- `apps/` - Django app configs + persistence models. `documents` (Document, Evidence), `candidates` (CandidateProfile + parts, now with Phase 3 normalized fields), `jobs` (JobProfile, JobRequirement, same extension), `skills` (Skill, SkillAlias, SkillRelation, seeded taxonomy), `semantics` (SemanticRepresentation), `analyses` (Analysis, RequirementEvaluationRecord - Phase 4), `recommendations` (Recommendation - Phase 5), and `tailoring` (TailoringPlan, TailoringChange - Phase 5) are implemented; `users`, `audit` remain boundaries for later phases.
+- `domain/`, `application/`, `infrastructure/`, `interfaces/` - the Clean Architecture layers; see the dependency-rule doc linked above and each layer's own `README.md` for what is implemented vs. reserved. `domain/matching/` (Phase 4) is the hybrid matching engine itself; `domain/truth/` (Phase 5) is the factual-safety layer every generated CV claim passes through; `domain/tailoring/` (Phase 5) is the tailoring plan/diff model - all pure Python, no framework imports.
+- `workers/` - Celery app, an infrastructure smoke-test task (`ping`), `process_cv_document`/`process_job_document` (the document processing pipeline), `run_analysis` (Phase 4's matching task), and `run_tailoring` (Phase 5's generation/validation/re-analysis task).
 - `tests/` - pytest suite (`api/`, `unit/`, `integration/`) plus `tests/fixtures/` (synthetic CV/job fixtures used by parser and extraction tests).
 
 ## Frontend
@@ -233,7 +244,9 @@ Angular 19, standalone components, feature-based architecture:
 - `features/skills` - the skill taxonomy API client and the related-skills panel used from `skill-chip`.
 - `features/dashboard` - a real workspace (recent CVs, recent job offers, processing counts, skill taxonomy landscape) plus the Phase 1 health-check widget.
 - `features/analysis` - the ATS analysis workspace (Phase 4): a candidate/job picker and history list (`analysis-list`), and the analysis detail page (`analysis-detail`) with a typographic score panel, a horizontal-bar score breakdown, an expandable requirement matrix with an evidence explorer per row, and a structured gap section. Real, working feature - not a placeholder.
-- `features/recommendations`, `tailoring`, `applications`, `settings` - still placeholder pages (later phases).
+- `features/recommendations` - the recommendations workspace for one analysis (Phase 5): findings grouped by priority, a safety badge on every row, a selection checkbox only where CVScanner can act safely, and the entry point into tailoring.
+- `features/tailoring` - the tailored-CV workspace (Phase 5): an honest progress timeline mapped to real backend states, before/after scores with an explicit non-guarantee disclaimer, a factual-consistency summary, and every change shown with its diff - accepted or rejected, never hidden.
+- `features/applications`, `settings` - still placeholder pages (later phases).
 - `styles/` - the design system: tokens (`_tokens.scss`), typography (`_typography.scss`), and shared mixins (`_mixins.scss`). See [Design system](#design-system).
 
 ## Celery
@@ -303,9 +316,16 @@ proficiency) render through one shared `entity-tag` primitive.
   oriented section headings). The `CandidateExtractor`/`JobExtractor`
   abstraction exists so a smarter (or LLM-assisted) extractor can replace
   it later without touching `application/` or `interfaces/`.
-- **No recommendations, CV tailoring, or claim validation.** Phase 4
-  stops at explaining the analysis (score, evidence, gaps) - see
-  [Roadmap](#roadmap).
+- **Tailoring only rewrites `SKILL` and `EXPERIENCE` facts** - the two
+  fact types the current recommendation types
+  (`KEYWORD_PLACEMENT`/`RESPONSIBILITY_ALIGNMENT`) ever mark safe to
+  automate. Reordering sections and every other recommendation type stay
+  informational, acted on by the candidate manually - see
+  [docs/architecture/phase-5-recommendations-and-tailoring.md](docs/architecture/phase-5-recommendations-and-tailoring.md)
+  "Known limitations".
+- **No cover letters, interview prep, or candidate ranking.** Phase 5
+  stops at recommending and tailoring wording for one candidate against
+  one job - see [Roadmap](#roadmap).
 - **Seniority/education/language normalization are keyword tables, not
   an NLP classifier** - the same "rule-based v1" boundary Phase 2
   documented for extraction, applied to Phase 3's normalization. See
@@ -327,6 +347,12 @@ proficiency) render through one shared `entity-tag` primitive.
   "Known limitations" for the specific boundaries (experience-date
   parsing, responsibility matching's lightweight lexical/semantic
   overlap, certifications never inferred from skills).
+- **Generated CV wording is never trusted on its own.** Every proposed
+  change - deterministic or LLM-assisted - passes through an
+  independent, deterministic Truth Layer before it can appear; a
+  provider failure or a rejected claim falls back to the original text,
+  never a crash and never invented filler. See
+  [ADR 0004](docs/adr/0004-truth-layer-independent-claim-validation.md).
 - **No ESLint configuration for the frontend** - Angular 19's `ng new` no
   longer scaffolds one by default. `make lint-frontend` runs TypeScript's
   type-checker instead; adding ESLint is left for when the team defines a
@@ -345,7 +371,7 @@ proficiency) render through one shared `entity-tag` primitive.
 
 ## Roadmap
 
-- **Phase 5** - recommendations: turning Phase 4's structured gaps into
-  concrete, evidence-grounded suggestions for the candidate.
-- **Phase 6** - LLM-assisted explanations, CV tailoring, and claim
-  validation ("truth layer").
+- **Phase 6** - cover letter generation, richer document-level tailoring
+  (section reordering, summary rewriting), and claim validation for
+  content types beyond the five categories `domain/truth/` currently
+  checks.

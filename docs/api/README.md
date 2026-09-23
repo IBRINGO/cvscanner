@@ -22,12 +22,16 @@ reachable.
 
 No authentication is required for this endpoint.
 
-The full CVs/jobs/skills/analyses endpoint table lives in the root
-[README.md](../../README.md#api) (kept in one place to avoid two
-copies drifting apart). For the Phase 4 analyses endpoints
-specifically - request/response shapes, the matching engine's evidence
-hierarchy, and scoring - see
+The full CVs/jobs/skills/analyses/recommendations/tailoring endpoint
+table lives in the root [README.md](../../README.md#api) (kept in one
+place to avoid two copies drifting apart). For the Phase 4 analyses
+endpoints specifically - request/response shapes, the matching engine's
+evidence hierarchy, and scoring - see
 [docs/architecture/phase-4-matching.md](../architecture/phase-4-matching.md).
+For the Phase 5 recommendations/tailoring endpoints - request/response
+shapes, the recommendation engine, and the Truth Layer every generated
+change passes through - see
+[docs/architecture/phase-5-recommendations-and-tailoring.md](../architecture/phase-5-recommendations-and-tailoring.md).
 
 As new endpoints land, document them in the root README's table (or
 generate an OpenAPI schema - not yet configured) grouped by resource:
