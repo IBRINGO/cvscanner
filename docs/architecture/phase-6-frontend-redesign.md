@@ -1,5 +1,19 @@
 # Phase 6 - Frontend Product Redesign
 
+> **Update (brand refinement pass):** the sections below describe the
+> initial redesign. A follow-up pass then applied the CVScanner brand
+> palette (logo-derived blue/teal/navy, Inter for UI text), rebuilt the
+> sidebar as a collapsible rail with a mobile drawer, added a real
+> product hero to the Workspace home, threaded an `ApplicationSessionService`
+> through the CV -> Job -> Analysis -> Recommendations -> Tailoring ->
+> Editor -> Export journey so tailoring links directly into the editor
+> with its accepted changes already applied, and substantially expanded
+> the CV editor (drag-and-drop reordering, click-to-select directly on
+> the rendered document, and add/duplicate/delete for individual
+> experience/education/project entries). See "Brand refinement pass"
+> below for the details; the architecture and safety boundaries
+> described in the rest of this document are unchanged.
+
 This document describes a full redesign of the Angular frontend built on
 top of the working Phase 1-5 backend contracts (see
 [phase-4-matching.md](phase-4-matching.md) and
@@ -164,18 +178,78 @@ work, and the PDF path already gives every template exactly. It is
 noted as a known limitation rather than shipped as a non-functional
 button.
 
+## Brand refinement pass
+
+A follow-up pass kept the same architecture and safety boundaries above
+and added:
+
+- **Brand palette**: `_tokens.scss` values were replaced with the
+  CVScanner brand system (a primary/deep blue accent, a teal/cyan
+  secondary hue reserved for gradients and brand moments via
+  `--gradient-brand`, and a cool near-white `--surface-base` instead of
+  a warmer neutral) - the token *names* and the decoupled-semantics
+  strategy from the initial pass are unchanged, so this was a values-only
+  swap every consuming component picked up automatically. `_typography.scss`
+  swapped the UI font from IBM Plex Sans to Inter, keeping Space Grotesk
+  for display and IBM Plex Mono for data - still three families total,
+  not four.
+- **Sidebar**: `layout/sidebar` is now collapsible (264px/72px, remembered
+  via `SidebarStateService` + `localStorage`) with native-title tooltips
+  when collapsed, and a mobile slide-in drawer (left-anchored,
+  `transform: translateX(-100%)` when closed) opened from a new header
+  hamburger trigger - replacing the old horizontal-scrolling nav row.
+- **Workspace hero**: the home page leads with a real product
+  introduction (headline, explanation, primary/secondary CTAs, and a
+  `DocumentPreview`-based CV+Job -> Analysis -> Tailored CV diagram)
+  above the existing Active Applications list, rather than starting
+  directly with the applications utility.
+- **`ApplicationSessionService`** (`features/applications/services`):
+  persists the current cv/job/analysis/tailoring/template ids in
+  `sessionStorage` as the guided journey progresses. Its main practical
+  effect is that `TailoringDetailComponent`, once a plan is `COMPLETED`,
+  resolves the real candidate document id (via the analysis) and offers
+  "Continue to templates & CV editor," opening the editor with
+  `?tailoringId=<id>` so `applyTailoringChanges` (`features/cvs/utils`)
+  projects the plan's *accepted* changes onto the original profile
+  before rendering - the tailored CV is now viewed through the same
+  template engine as any other CV, per the brief's requirement that
+  tailoring output not stop at diff cards.
+- **CV editor upgrades**: section reordering is now drag-and-drop
+  (`@angular/cdk/drag-drop` - the one new dependency this pass added,
+  justified because arrow buttons cannot express "move to any position
+  in one gesture" the way the brief's example does); `CvDocumentRenderer`
+  gained an opt-in `interactive`/`selectedSectionId` mode so clicking a
+  section directly in the rendered document selects it (off by default,
+  so the template gallery and any future read-only preview stay
+  non-interactive); and experience/education/project entries can now be
+  individually added, duplicated, and deleted, with skills/
+  certifications/languages gaining an "add" row alongside the existing
+  per-item remove control.
+
+A real bug surfaced while stabilizing tests for this pass: an `effect()`
+registered in the editor's constructor (to mirror `templateId` into the
+session service) leaked across component instances in the test runner
+and pegged the browser's event loop, causing widespread flaky
+disconnects across the whole suite. It was replaced with a plain method
+call at the two actual template-change call sites - no reactive
+`effect()` is used in the editor.
+
 ## Known limitations
 
-- DOCX export is not implemented (see above).
+- DOCX export is not implemented (see "Export" above).
 - The page-count estimate in the export panel is a real DOM measurement
   but is still an estimate, not a guarantee of the final printed PDF's
   exact pagination (actual page breaks depend on the browser's print
   engine).
-- The CV editor's per-field editing covers summary, experience,
-  education, and list removal for skills/certifications/languages/
-  projects; it does not expose deep field-level editing for every
-  possible profile field (e.g. individual achievement bullet reordering
-  within one experience entry).
+- The CV editor covers full add/duplicate/delete/edit for experience,
+  education, and project entries, an add/remove row for skills/
+  certifications/languages, and reordering for sections; it does not
+  expose reordering of repeated items *within* one section (e.g.
+  moving one experience entry above another) or achievement-bullet-level
+  editing.
+- Tailoring is viewable as a real rendered CV via "Continue to templates
+  & CV editor," but the tailoring results page itself still shows
+  changes as diff cards rather than a full document preview inline.
 - The template gallery's preview cards are scaled-down full renders
   (not separately generated thumbnail images), which keeps them exactly
   in sync with the real templates at the cost of some fine text being

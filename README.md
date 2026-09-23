@@ -251,7 +251,7 @@ for the full redesign rationale.
 - `shared/` - reusable, feature-agnostic UI: `status-badge`, `evidence-note`, `skill-chip` (with a lazily-loaded related-skills panel), `entity-tag`, `upload-dropzone`, `processing-timeline`, `toast-stack`, plus the Phase 6 primitives `score-gauge` (the animated ATS score visualization), `application-progress` (the CV -> Export journey step indicator), and `document-preview` (paper-styled document previews); `pollUntilDone` (status polling) and `formatEnumLabel` (enum-to-label formatting).
 - `core/icons.ts` - the single registered icon set (Lucide, via `@ng-icons`), provided once at the app root.
 - `layout/` - `MainLayoutComponent` (header + sidebar + router-outlet + footer, responsive down to mobile) used by every route; `AuthLayoutComponent` reserved for future login/signup pages.
-- `features/cvs`, `features/jobs` - the library pages (`cv-list`/`job-list`) and detail pages (`cv-detail`/`job-detail`) for uploading/reviewing CVs and job offers independently of the guided journey below, plus (Phase 6) `cv-editor` - the structured, client-side-only CV editor at `/cvs/:id/editor` (see [ADR 0005](docs/adr/0005-cv-editor-stays-client-side.md)).
+- `features/cvs`, `features/jobs` - the library pages (`cv-list`/`job-list`) and detail pages (`cv-detail`/`job-detail`) for uploading/reviewing CVs and job offers independently of the guided journey below, plus (Phase 6) `cv-editor` - the structured, client-side-only CV editor at `/cvs/:id/editor` (see [ADR 0005](docs/adr/0005-cv-editor-stays-client-side.md)), with drag-and-drop section reordering (`@angular/cdk/drag-drop` - the one new runtime dependency added for this redesign) and click-to-select directly on the rendered document.
 - `features/skills` - the skill taxonomy API client and the related-skills panel used from `skill-chip`.
 - `features/workspace` (Phase 6, replaces the old `dashboard`) - the product home: real Active Applications first, an "Analyze a new application" entry point, then recent CVs/jobs and the skill-taxonomy landscape. No KPI cards.
 - `features/applications` (Phase 6, real - no longer a placeholder) - `build-applications.ts` derives the Applications view client-side from CVs/jobs/analyses/tailoring plans (no new backend entity); `new-application` is the guided CV -> Job -> Analysis journey at `/applications/new`; `application-list` is the full index.
@@ -275,11 +275,14 @@ for the full redesign rationale.
 
 Phase 6 replaced the frontend's visual identity outright rather than
 extending the prior one: a document-first, precision/measurement register
-instead of an editorial reading register. Headings, scores, and document
-titles use Space Grotesk (a confident geometric grotesk); UI text stays
-IBM Plex Sans and data/evidence stays IBM Plex Mono. One brand accent
-(a deep signal blue) drives every primary action and "actively
-processing" state; a decoupled semantic palette
+instead of an editorial reading register, built around the CVScanner
+brand palette (a primary/deep blue accent, with a teal/cyan hue reserved
+for gradients and brand moments via `--gradient-brand`, never the default
+background). Headings, scores, and document titles use Space Grotesk (a
+confident geometric grotesk); UI text uses Inter and data/evidence stays
+IBM Plex Mono - three families total. One brand accent drives every
+primary action and "actively processing" state; a decoupled semantic
+palette
 (`--positive`/`--attention`/`--negative`/`--inferred`, aliased for call-site
 clarity as `--match-*` and `--status-*`) means a color always means the
 same thing everywhere, and the brand accent never doubles as a warning
