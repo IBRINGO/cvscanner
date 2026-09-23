@@ -10,8 +10,21 @@ import { CV_TEMPLATES } from '../../models/template-definition.model';
 import { SAMPLE_PROFILE } from '../../models/sample-profile';
 
 /**
+ * The reference width the renderer is measured at before being scaled
+ * down into a thumbnail - must match `.cv-page`'s `max-width` in
+ * cv-document-renderer.component.scss so the thumbnail is a faithful
+ * miniature of the real page, not a different layout.
+ */
+const THUMB_REFERENCE_WIDTH = 760;
+const THUMB_WIDTH = 240;
+const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
+
+/**
  * The template gallery: full-size, realistic previews so templates can
- * actually be compared, not a grid of tiny thumbnails. Previews use the
+ * actually be compared, not a grid of generic file icons. Each card
+ * renders the same live CvDocumentRenderer used by the editor/export,
+ * scaled down into a crisp paper thumbnail - never a separately
+ * generated (and therefore driftable) preview image. Previews use the
  * visitor's own most recently processed CV when one exists (their real
  * data through every template); otherwise a clearly-labelled sample
  * profile, never a fabricated "real" candidate.
@@ -26,29 +39,41 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
     <header class="gallery__header">
       <h1>Templates</h1>
       <p class="text-secondary">
-        Six ATS-friendly templates, rendered from the same profile.
+        Six ATS-friendly templates, rendered live from the same profile.
         @if (usingSample()) {
           These previews use sample data -
           <a routerLink="/cvs">upload a CV</a>
           to preview with your own.
-        } @else {
+        } @else if (profile()?.full_name) {
           Previewing with {{ profile()?.full_name }}'s CV.
+        } @else {
+          Previewing with your most recent CV.
         }
       </p>
     </header>
 
     <div class="gallery__grid">
-      @for (t of templates; track t.id) {
-        <article class="gallery__card">
-          <div class="gallery__preview">
-            @if (profile(); as p) {
-              <app-cv-document-renderer
-                [profile]="p"
-                [sectionOrder]="sectionOrder"
-                [template]="t"
-              />
-            }
-          </div>
+      @for (t of templates; track t.id; let i = $index) {
+        <article class="gallery__card" [style.animation-delay.ms]="i * 60">
+          <a
+            class="gallery__thumb-link"
+            [routerLink]="cvId() ? ['/cvs', cvId(), 'editor'] : ['/cvs']"
+            [queryParams]="cvId() ? { template: t.id } : null"
+            [attr.aria-label]="'Preview and use the ' + t.name + ' template'"
+          >
+            <div class="gallery__thumb">
+              @if (profile(); as p) {
+                <div class="gallery__thumb-canvas">
+                  <app-cv-document-renderer [profile]="p" [sectionOrder]="sectionOrder" [template]="t" />
+                </div>
+              }
+              <div class="gallery__thumb-fade"></div>
+              <div class="gallery__thumb-overlay">
+                <ng-icon name="lucideEye" size="16" />
+                {{ cvId() ? 'Preview with your CV' : 'Preview template' }}
+              </div>
+            </div>
+          </a>
           <div class="gallery__meta">
             <div class="gallery__badges">
               <span class="gallery__badge">{{ t.columns }}-column</span>
@@ -83,20 +108,89 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
       }
       .gallery__grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-        gap: var(--space-6);
+        grid-template-columns: repeat(auto-fit, ${THUMB_WIDTH}px);
+        justify-content: center;
+        gap: var(--space-7) var(--space-6);
+      }
+      @media (min-width: 860px) {
+        .gallery__grid {
+          justify-content: start;
+        }
       }
       .gallery__card {
         display: flex;
         flex-direction: column;
         gap: var(--space-3);
+        width: ${THUMB_WIDTH}px;
+        animation: gallery-card-in var(--motion-slow) var(--motion-ease) both;
       }
-      .gallery__preview {
-        transform: scale(0.62);
-        transform-origin: top center;
-        height: 340px;
+      .gallery__thumb-link {
+        display: block;
+        text-decoration: none;
+        border-radius: var(--radius-md);
+        outline-offset: 3px;
+      }
+      .gallery__thumb {
+        position: relative;
+        width: ${THUMB_WIDTH}px;
+        aspect-ratio: 3 / 4;
         overflow: hidden;
         border-radius: var(--radius-md);
+        border: 1px solid var(--paper-border);
+        background: var(--paper-surface);
+        box-shadow: var(--shadow-document);
+        transition:
+          transform var(--motion-base) var(--motion-spring),
+          box-shadow var(--motion-base) var(--motion-ease),
+          border-color var(--motion-base) var(--motion-ease);
+      }
+      .gallery__thumb-link:hover .gallery__thumb,
+      .gallery__thumb-link:focus-visible .gallery__thumb {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-overlay);
+        border-color: var(--accent);
+      }
+      .gallery__thumb-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: ${THUMB_REFERENCE_WIDTH}px;
+        transform: scale(${THUMB_SCALE});
+        transform-origin: top left;
+        pointer-events: none;
+      }
+      .gallery__thumb-fade {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 56px;
+        background: linear-gradient(to bottom, transparent, var(--paper-surface));
+        pointer-events: none;
+      }
+      .gallery__thumb-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        background: rgba(15, 23, 42, 0.55);
+        color: #fff;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        text-align: center;
+        padding: 0 var(--space-3);
+        opacity: 0;
+        transform: translateY(4px);
+        transition:
+          opacity var(--motion-base) var(--motion-ease),
+          transform var(--motion-base) var(--motion-ease);
+      }
+      .gallery__thumb-link:hover .gallery__thumb-overlay,
+      .gallery__thumb-link:focus-visible .gallery__thumb-overlay {
+        opacity: 1;
+        transform: translateY(0);
       }
       .gallery__badges {
         display: flex;
@@ -134,9 +228,13 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
         font-weight: 600;
         text-decoration: none;
         width: fit-content;
+        transition:
+          background var(--motion-fast) var(--motion-ease),
+          transform var(--motion-fast) var(--motion-ease);
       }
       .gallery__select:hover {
         background: var(--accent-strong);
+        transform: translateY(-1px);
       }
       .gallery__select--secondary {
         background: none;
@@ -145,6 +243,29 @@ import { SAMPLE_PROFILE } from '../../models/sample-profile';
       }
       .gallery__select--secondary:hover {
         background: var(--surface-sunken);
+        transform: none;
+      }
+
+      @keyframes gallery-card-in {
+        from {
+          opacity: 0;
+          transform: translateY(18px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gallery__card {
+          animation: none;
+        }
+        .gallery__thumb,
+        .gallery__thumb-overlay,
+        .gallery__select {
+          transition: none;
+        }
       }
     `,
   ],
