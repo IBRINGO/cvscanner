@@ -7,15 +7,18 @@ requirements, produces an explainable score, and recommends improvements
 (including, eventually, a tailored CV with claims validated against
 evidence).
 
-**This repository is at Phase 3: Semantic Intelligence and Knowledge
-Enrichment.** CVs and job offers can be uploaded, parsed, and structured
-into evidence-backed profiles with normalized skills (Phase 2), which
-Phase 3 further enriches: skill relationships and ecosystems, seniority/
-education/language normalization, technology mentions scanned from
-prose, structured experience requirements, and an optional embedding
-foundation. Candidate-job matching, scoring, recommendations, and CV
-tailoring are not implemented yet - see [Roadmap](#roadmap) and
-[Known limitations](#known-limitations).
+**This repository is at Phase 4: Evidence-Aware Hybrid ATS Matching
+Engine.** CVs and job offers can be uploaded, parsed, and structured into
+evidence-backed profiles with normalized skills (Phase 2), enriched with
+skill relationships, normalized seniority/education/language, and an
+optional embedding foundation (Phase 3). Phase 4 adds the actual
+candidate-job matching: a hybrid lexical/alias/ontology/semantic engine
+across eight dimensions (skills, experience, seniority, education,
+certifications, languages, responsibilities, domain alignment), a
+deterministic and versioned scoring engine, structured gap detection,
+and an analysis workspace in the frontend. Recommendations, CV
+tailoring, and claim validation are not implemented yet - see
+[Roadmap](#roadmap) and [Known limitations](#known-limitations).
 
 ## Architecture
 
@@ -191,6 +194,10 @@ shape (`document_type` scoped):
 | GET    | `/api/v1/jobs/{id}/profile/`| Structured `JobProfile` (`null` until `PROCESSED`, now includes Phase 3 fields - see below) |
 | GET    | `/api/v1/skills/`           | The full skill taxonomy (category, domain, ecosystem, description) |
 | GET    | `/api/v1/skills/{canonical_name}/` | One skill's relationships (parent, children, ecosystem siblings, explicit relations) |
+| POST   | `/api/v1/analyses/`         | Create an ATS analysis for a processed CV + job offer pair; queues matching |
+| GET    | `/api/v1/analyses/`         | List analyses |
+| GET    | `/api/v1/analyses/{id}/`    | Full analysis: score breakdown, requirement evaluations, gaps |
+| GET    | `/api/v1/analyses/{id}/status/` | Processing status + error (if failed) |
 
 `CandidateProfile`/`JobProfile` responses carry Phase 3's normalized
 fields alongside the Phase 2 raw ones: `Experience.seniority`,
@@ -198,10 +205,10 @@ fields alongside the Phase 2 raw ones: `Experience.seniority`,
 `proficiency_normalized`, `JobProfile.seniority_normalized`,
 `JobRequirement.minimum_years`/`normalized_value`.
 
-No matching/scoring endpoint exists - see [Known limitations](#known-limitations).
 See [docs/api/README.md](docs/api/README.md),
 [docs/architecture/phase-2-pipeline.md](docs/architecture/phase-2-pipeline.md),
-and [docs/architecture/phase-3-semantics.md](docs/architecture/phase-3-semantics.md)
+[docs/architecture/phase-3-semantics.md](docs/architecture/phase-3-semantics.md),
+and [docs/architecture/phase-4-matching.md](docs/architecture/phase-4-matching.md)
 for the full pipeline and response shapes.
 
 ## Backend
@@ -209,9 +216,9 @@ for the full pipeline and response shapes.
 Django + Django REST Framework, organized as a modular monolith:
 
 - `config/` - settings (`base` / `development` / `testing` / `production`), root URLs, WSGI/ASGI, and `container.py` (the composition root - see the dependency-rule doc).
-- `apps/` - Django app configs + persistence models. `documents` (Document, Evidence), `candidates` (CandidateProfile + parts, now with Phase 3 normalized fields), `jobs` (JobProfile, JobRequirement, same extension), `skills` (Skill, SkillAlias, SkillRelation, seeded taxonomy), and `semantics` (SemanticRepresentation) are implemented; `users`, `analyses`, `recommendations`, `tailoring`, `audit` remain boundaries for later phases.
-- `domain/`, `application/`, `infrastructure/`, `interfaces/` - the Clean Architecture layers; see the dependency-rule doc linked above and each layer's own `README.md` for what is implemented vs. reserved.
-- `workers/` - Celery app, an infrastructure smoke-test task (`ping`), and `process_cv_document`/`process_job_document` (the real document processing pipeline, now including Phase 3 enrichment/embedding).
+- `apps/` - Django app configs + persistence models. `documents` (Document, Evidence), `candidates` (CandidateProfile + parts, now with Phase 3 normalized fields), `jobs` (JobProfile, JobRequirement, same extension), `skills` (Skill, SkillAlias, SkillRelation, seeded taxonomy), `semantics` (SemanticRepresentation), and `analyses` (Analysis, RequirementEvaluationRecord - Phase 4) are implemented; `users`, `recommendations`, `tailoring`, `audit` remain boundaries for later phases.
+- `domain/`, `application/`, `infrastructure/`, `interfaces/` - the Clean Architecture layers; see the dependency-rule doc linked above and each layer's own `README.md` for what is implemented vs. reserved. `domain/matching/` (Phase 4) is the hybrid matching engine itself - pure Python, no framework imports.
+- `workers/` - Celery app, an infrastructure smoke-test task (`ping`), `process_cv_document`/`process_job_document` (the document processing pipeline), and `run_analysis` (Phase 4's matching task).
 - `tests/` - pytest suite (`api/`, `unit/`, `integration/`) plus `tests/fixtures/` (synthetic CV/job fixtures used by parser and extraction tests).
 
 ## Frontend
@@ -225,7 +232,8 @@ Angular 19, standalone components, feature-based architecture:
 - `features/cvs`, `features/jobs` - upload workspace (`cv-list`/`job-list`) and detail page (`cv-detail`/`job-detail`) that polls status and renders the structured profile view once processed, including Phase 3's seniority/education/language/requirement enrichment. Real, working features - not placeholders.
 - `features/skills` - the skill taxonomy API client and the related-skills panel used from `skill-chip`.
 - `features/dashboard` - a real workspace (recent CVs, recent job offers, processing counts, skill taxonomy landscape) plus the Phase 1 health-check widget.
-- `features/analysis`, `recommendations`, `tailoring`, `applications`, `settings` - still placeholder pages (later phases).
+- `features/analysis` - the ATS analysis workspace (Phase 4): a candidate/job picker and history list (`analysis-list`), and the analysis detail page (`analysis-detail`) with a typographic score panel, a horizontal-bar score breakdown, an expandable requirement matrix with an evidence explorer per row, and a structured gap section. Real, working feature - not a placeholder.
+- `features/recommendations`, `tailoring`, `applications`, `settings` - still placeholder pages (later phases).
 - `styles/` - the design system: tokens (`_tokens.scss`), typography (`_typography.scss`), and shared mixins (`_mixins.scss`). See [Design system](#design-system).
 
 ## Celery
@@ -246,11 +254,14 @@ humanist sans (IBM Plex Sans) for UI text and a mono (IBM Plex Mono) for
 data/evidence, one accent color (terracotta) used consistently, mostly-sharp
 surfaces with pill shapes reserved for status/skill chips, and layout
 variety (an editorial document view for profiles, a split upload
-workspace, a processing timeline) instead of repeating a card-grid
-pattern. Status colors (document processing state) are kept separate
-from and never reused as skill/requirement match indicators, since no
-matching engine exists yet. See `frontend/src/styles/_tokens.scss` for
-the full token set.
+workspace, a processing timeline, and now a segmented analysis
+workspace) instead of repeating a card-grid pattern. Phase 4 added a
+separate semantic color system for match states (`--match-positive`,
+`--match-attention`, `--match-negative`, `--match-neutral`,
+`--match-semantic`) - visually coherent with but never reused from the
+document processing-status colors, and never color alone (always paired
+with an icon and a text label). See `frontend/src/styles/_tokens.scss`
+for the full token set.
 
 Phase 3 added a single icon family (Lucide, via `@ng-icons`, registered
 once in `core/icons.ts`) used for navigation, section headers, document
@@ -292,19 +303,30 @@ proficiency) render through one shared `entity-tag` primitive.
   oriented section headings). The `CandidateExtractor`/`JobExtractor`
   abstraction exists so a smarter (or LLM-assisted) extractor can replace
   it later without touching `application/` or `interfaces/`.
-- **No candidate-job matching, scoring, recommendations, or tailoring.**
-  Phases 2 and 3 deliberately stop at structured, evidence-backed, and
-  now semantically enriched profiles - see [Roadmap](#roadmap).
+- **No recommendations, CV tailoring, or claim validation.** Phase 4
+  stops at explaining the analysis (score, evidence, gaps) - see
+  [Roadmap](#roadmap).
 - **Seniority/education/language normalization are keyword tables, not
   an NLP classifier** - the same "rule-based v1" boundary Phase 2
   documented for extraction, applied to Phase 3's normalization. See
   [docs/architecture/phase-3-semantics.md](docs/architecture/phase-3-semantics.md)
   "Known limitations".
 - **Embeddings are stored as JSON, not indexed** - `FakeEmbeddingProvider`
-  is the default (no network, no API key); `OpenAIEmbeddingProvider`
-  activates only when `OPENAI_API_KEY` is configured. No similarity
-  search exists yet - see
+  is the default in tests (no network, no API key); `GeminiEmbeddingProvider`
+  is the primary provider when `GEMINI_API_KEY` is configured, with
+  `OpenAIEmbeddingProvider` as a fallback when `OPENAI_API_KEY` is
+  configured. If every configured provider fails, matching degrades to
+  lexical/ontology signals only rather than failing the analysis. No
+  similarity search exists yet - see
   [ADR 0002](docs/adr/0002-json-embeddings-not-pgvector.md).
+- **The matching engine is a rule-based hybrid, not an ML ranker.**
+  Semantic similarity is one signal among several and is only consulted
+  when lexical/alias/ontology matching does not resolve a requirement -
+  see [ADR 0003](docs/adr/0003-hybrid-matching-not-pure-embeddings.md)
+  and [docs/architecture/phase-4-matching.md](docs/architecture/phase-4-matching.md)
+  "Known limitations" for the specific boundaries (experience-date
+  parsing, responsibility matching's lightweight lexical/semantic
+  overlap, certifications never inferred from skills).
 - **No ESLint configuration for the frontend** - Angular 19's `ng new` no
   longer scaffolds one by default. `make lint-frontend` runs TypeScript's
   type-checker instead; adding ESLint is left for when the team defines a
@@ -323,10 +345,7 @@ proficiency) render through one shared `entity-tag` primitive.
 
 ## Roadmap
 
-- **Phase 4** - the ATS Matching Engine: candidate-job matching over the
-  semantic representations Phase 3 produced, evidence retrieval, and
-  (if justified once real query volume exists) indexed vector search.
-- **Phase 5** - deterministic, explainable scoring engine, gap analysis,
-  recommendations.
+- **Phase 5** - recommendations: turning Phase 4's structured gaps into
+  concrete, evidence-grounded suggestions for the candidate.
 - **Phase 6** - LLM-assisted explanations, CV tailoring, and claim
   validation ("truth layer").
