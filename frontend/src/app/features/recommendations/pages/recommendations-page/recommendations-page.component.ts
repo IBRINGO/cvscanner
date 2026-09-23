@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } 
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { CVSCANNER_ICONS } from '../../../../core/icons';
+import { ApplicationProgressComponent } from '../../../../shared/components/ui/application-progress/application-progress.component';
 import { AnalysisApiService } from '../../../analysis/services/analysis-api.service';
 import { CvApiService } from '../../../cvs/services/cv-api.service';
 import { JobApiService } from '../../../jobs/services/job-api.service';
@@ -21,13 +22,15 @@ import { RecommendationApiService } from '../../services/recommendation-api.serv
 @Component({
   selector: 'app-recommendations-page',
   standalone: true,
-  imports: [RouterLink, NgIcon, RecommendationListComponent],
+  imports: [RouterLink, NgIcon, RecommendationListComponent, ApplicationProgressComponent],
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a [routerLink]="['/analysis', analysisId]" class="recommendations-page__back text-secondary">
       Back to analysis
     </a>
+
+    <app-application-progress [current]="'recommendations'" [completed]="['cv', 'job', 'analysis']" />
 
     @if (candidateName() || jobTitle()) {
       <header class="recommendations-page__context">
@@ -73,13 +76,15 @@ import { RecommendationApiService } from '../../services/recommendation-api.serv
             Choose how much CVScanner may rephrase. Nothing outside your verified experience is ever added.
           </p>
           <div class="recommendations-page__mode">
-            <label>
+            <label class="recommendations-page__mode-option" [attr.data-checked]="mode() === 'CONSERVATIVE'">
               <input type="radio" name="mode" value="CONSERVATIVE" [checked]="mode() === 'CONSERVATIVE'" (change)="mode.set('CONSERVATIVE')" />
-              Conservative - reorder and normalize wording only
+              <span class="recommendations-page__mode-title">Conservative</span>
+              <span class="text-secondary">Reorder and normalize wording only.</span>
             </label>
-            <label>
+            <label class="recommendations-page__mode-option" [attr.data-checked]="mode() === 'AGGRESSIVE_SAFE'">
               <input type="radio" name="mode" value="AGGRESSIVE_SAFE" [checked]="mode() === 'AGGRESSIVE_SAFE'" (change)="mode.set('AGGRESSIVE_SAFE')" />
-              Aggressive but safe - may rewrite bullets, never invents facts
+              <span class="recommendations-page__mode-title">Aggressive but safe</span>
+              <span class="text-secondary">May rewrite bullets. Never invents facts.</span>
             </label>
           </div>
           <button
@@ -104,6 +109,10 @@ import { RecommendationApiService } from '../../services/recommendation-api.serv
         margin-bottom: var(--space-5);
         font-size: var(--text-sm);
         text-decoration: none;
+      }
+      app-application-progress {
+        display: block;
+        margin-bottom: var(--space-6);
       }
       .recommendations-page__context {
         display: flex;
@@ -146,16 +155,45 @@ import { RecommendationApiService } from '../../services/recommendation-api.serv
         max-width: 560px;
       }
       .recommendations-page__mode {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-2);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
         margin: var(--space-4) 0;
+      }
+      .recommendations-page__mode-option {
+        display: grid;
+        grid-template-columns: 16px 1fr;
+        column-gap: var(--space-2);
+        row-gap: 2px;
+        padding: var(--space-4);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: border-color var(--motion-fast) var(--motion-ease);
+      }
+      .recommendations-page__mode-option:hover {
+        border-color: var(--border-strong);
+      }
+      .recommendations-page__mode-option[data-checked='true'] {
+        border-color: var(--accent);
+        background: var(--accent-tint);
+      }
+      .recommendations-page__mode-option input {
+        grid-row: 1 / 3;
+        align-self: start;
+        margin-top: 3px;
+      }
+      .recommendations-page__mode-title {
+        font-weight: 600;
+        color: var(--ink-primary);
+      }
+      .recommendations-page__mode-option .text-secondary {
         font-size: var(--text-sm);
       }
-      .recommendations-page__mode label {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
+      @media (max-width: 560px) {
+        .recommendations-page__mode {
+          grid-template-columns: 1fr;
+        }
       }
       .recommendations-page__submit {
         font: inherit;

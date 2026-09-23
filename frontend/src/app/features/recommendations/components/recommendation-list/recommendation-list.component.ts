@@ -61,20 +61,29 @@ interface PriorityGroup {
 
               @if (isExpanded(recommendation.id)) {
                 <div class="recommendation-list__detail">
-                  <p class="recommendation-list__reason">{{ recommendation.reason }}</p>
-                  <p class="recommendation-list__action text-secondary">{{ recommendation.suggested_action }}</p>
+                  <div class="recommendation-list__field">
+                    <span class="recommendation-list__label text-tertiary">Why</span>
+                    <p class="recommendation-list__reason">{{ recommendation.reason }}</p>
+                  </div>
                   @if (recommendation.supporting_evidence.length > 0) {
-                    <ul class="recommendation-list__evidence">
-                      @for (item of recommendation.supporting_evidence; track $index) {
-                        <li>
-                          <figcaption class="text-tertiary font-mono">
-                            {{ item.source_label ?? formatEnumLabel(item.source_type) }}
-                          </figcaption>
-                          <blockquote>{{ item.text }}</blockquote>
-                        </li>
-                      }
-                    </ul>
+                    <div class="recommendation-list__field">
+                      <span class="recommendation-list__label text-tertiary">Evidence</span>
+                      <ul class="recommendation-list__evidence">
+                        @for (item of recommendation.supporting_evidence; track $index) {
+                          <li>
+                            <figcaption class="text-tertiary font-mono">
+                              {{ item.source_label ?? formatEnumLabel(item.source_type) }}
+                            </figcaption>
+                            <blockquote>{{ item.text }}</blockquote>
+                          </li>
+                        }
+                      </ul>
+                    </div>
                   }
+                  <div class="recommendation-list__field">
+                    <span class="recommendation-list__label text-tertiary">Recommended action</span>
+                    <p class="recommendation-list__action">{{ recommendation.suggested_action }}</p>
+                  </div>
                 </div>
               }
             </li>
@@ -147,11 +156,22 @@ interface PriorityGroup {
         color: var(--ink-tertiary);
       }
       .recommendation-list__detail {
-        padding: 0 0 var(--space-4) 28px;
+        padding: 0 0 var(--space-5) 28px;
         display: flex;
         flex-direction: column;
-        gap: var(--space-2);
+        gap: var(--space-4);
         max-width: 65ch;
+      }
+      .recommendation-list__field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+      .recommendation-list__label {
+        font-size: var(--text-xs);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
       .recommendation-list__reason {
         margin: 0;
@@ -160,6 +180,8 @@ interface PriorityGroup {
       .recommendation-list__action {
         margin: 0;
         font-size: var(--text-sm);
+        color: var(--ink-primary);
+        font-weight: 500;
       }
       .recommendation-list__evidence {
         list-style: none;
