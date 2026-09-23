@@ -7,22 +7,31 @@ requirements, produces an explainable score, and recommends improvements
 (including, eventually, a tailored CV with claims validated against
 evidence).
 
-**This repository is at Phase 5: Evidence-Backed Recommendations and CV
-Tailoring.** CVs and job offers can be uploaded, parsed, and structured
-into evidence-backed profiles with normalized skills (Phase 2), enriched
-with skill relationships and normalized seniority/education/language
-(Phase 3), and matched against a job through a hybrid lexical/alias/
-ontology/semantic engine with a deterministic, versioned score and
-structured gaps (Phase 4). Phase 5 turns those gaps into deterministic,
-evidence-backed recommendations, and lets a candidate generate a
-tailored CV - reordering, normalizing, and (optionally) LLM-assisted
-rephrasing - with every generated claim independently checked by a
-Truth Layer before it can appear, and the tailored result re-scored
-through the same Phase 4 engine. Nothing outside a candidate's verified
-experience is ever added. See [Roadmap](#roadmap) and
-[Known limitations](#known-limitations) for what is deliberately still
-out of scope (recommendations beyond text, cover letters, CV rewriting
-beyond wording, ranking).
+**This repository's backend is at Phase 5 (Evidence-Backed Recommendations
+and CV Tailoring); the frontend has completed Phase 6, a full product
+redesign on top of that same backend.** CVs and job offers can be
+uploaded, parsed, and structured into evidence-backed profiles with
+normalized skills (Phase 2), enriched with skill relationships and
+normalized seniority/education/language (Phase 3), and matched against a
+job through a hybrid lexical/alias/ontology/semantic engine with a
+deterministic, versioned score and structured gaps (Phase 4). Phase 5
+turns those gaps into deterministic, evidence-backed recommendations, and
+lets a candidate generate a tailored CV - reordering, normalizing, and
+(optionally) LLM-assisted rephrasing - with every generated claim
+independently checked by a Truth Layer before it can appear, and the
+tailored result re-scored through the same Phase 4 engine. Nothing
+outside a candidate's verified experience is ever added.
+
+Phase 6 rebuilt the Angular frontend around that capability as a real
+CV -> Job -> Analysis -> Recommendations -> Tailoring -> Export
+application journey instead of an admin dashboard: a derived
+"Applications" workspace home, an animated ATS score gauge, a document-
+centric guided upload flow, a six-template CV editor with live preview,
+and PDF export - all on the exact same API contracts above, no backend
+change. See [docs/architecture/phase-6-frontend-redesign.md](docs/architecture/phase-6-frontend-redesign.md).
+See [Roadmap](#roadmap) and [Known limitations](#known-limitations) for
+what is deliberately still out of scope (recommendations beyond text,
+cover letters, CV rewriting beyond wording, ranking, DOCX export).
 
 ## Architecture
 
@@ -234,19 +243,23 @@ Django + Django REST Framework, organized as a modular monolith:
 
 ## Frontend
 
-Angular 19, standalone components, feature-based architecture:
+Angular 19, standalone components, feature-based architecture. See
+[docs/architecture/phase-6-frontend-redesign.md](docs/architecture/phase-6-frontend-redesign.md)
+for the full redesign rationale.
 
 - `core/` - app-wide infrastructure: `config` (typed `APP_CONFIG`, backed by `src/environments/`), `http` (`ApiClientService` + auth/error/loading interceptors), `auth` (models/store/service/guard - **not implemented**, see Known limitations), `services` (notification, file-upload, download).
-- `shared/` - reusable, feature-agnostic UI: `status-badge`, `evidence-note`, `skill-chip` (now with a lazily-loaded related-skills panel), `entity-tag`, `upload-dropzone`, `processing-timeline`, `toast-stack` (renders `NotificationService`'s state), plus `pollUntilDone` (the status-polling utility) and `formatEnumLabel` (shared enum-to-label formatting).
+- `shared/` - reusable, feature-agnostic UI: `status-badge`, `evidence-note`, `skill-chip` (with a lazily-loaded related-skills panel), `entity-tag`, `upload-dropzone`, `processing-timeline`, `toast-stack`, plus the Phase 6 primitives `score-gauge` (the animated ATS score visualization), `application-progress` (the CV -> Export journey step indicator), and `document-preview` (paper-styled document previews); `pollUntilDone` (status polling) and `formatEnumLabel` (enum-to-label formatting).
 - `core/icons.ts` - the single registered icon set (Lucide, via `@ng-icons`), provided once at the app root.
 - `layout/` - `MainLayoutComponent` (header + sidebar + router-outlet + footer, responsive down to mobile) used by every route; `AuthLayoutComponent` reserved for future login/signup pages.
-- `features/cvs`, `features/jobs` - upload workspace (`cv-list`/`job-list`) and detail page (`cv-detail`/`job-detail`) that polls status and renders the structured profile view once processed, including Phase 3's seniority/education/language/requirement enrichment. Real, working features - not placeholders.
+- `features/cvs`, `features/jobs` - the library pages (`cv-list`/`job-list`) and detail pages (`cv-detail`/`job-detail`) for uploading/reviewing CVs and job offers independently of the guided journey below, plus (Phase 6) `cv-editor` - the structured, client-side-only CV editor at `/cvs/:id/editor` (see [ADR 0005](docs/adr/0005-cv-editor-stays-client-side.md)).
 - `features/skills` - the skill taxonomy API client and the related-skills panel used from `skill-chip`.
-- `features/dashboard` - a real workspace (recent CVs, recent job offers, processing counts, skill taxonomy landscape) plus the Phase 1 health-check widget.
-- `features/analysis` - the ATS analysis workspace (Phase 4): a candidate/job picker and history list (`analysis-list`), and the analysis detail page (`analysis-detail`) with a typographic score panel, a horizontal-bar score breakdown, an expandable requirement matrix with an evidence explorer per row, and a structured gap section. Real, working feature - not a placeholder.
-- `features/recommendations` - the recommendations workspace for one analysis (Phase 5): findings grouped by priority, a safety badge on every row, a selection checkbox only where CVScanner can act safely, and the entry point into tailoring.
-- `features/tailoring` - the tailored-CV workspace (Phase 5): an honest progress timeline mapped to real backend states, before/after scores with an explicit non-guarantee disclaimer, a factual-consistency summary, and every change shown with its diff - accepted or rejected, never hidden.
-- `features/applications`, `settings` - still placeholder pages (later phases).
+- `features/workspace` (Phase 6, replaces the old `dashboard`) - the product home: real Active Applications first, an "Analyze a new application" entry point, then recent CVs/jobs and the skill-taxonomy landscape. No KPI cards.
+- `features/applications` (Phase 6, real - no longer a placeholder) - `build-applications.ts` derives the Applications view client-side from CVs/jobs/analyses/tailoring plans (no new backend entity); `new-application` is the guided CV -> Job -> Analysis journey at `/applications/new`; `application-list` is the full index.
+- `features/analysis` - the ATS analysis workspace (Phase 4, Phase 6 visuals): a candidate/job picker and history list (`analysis-list`), and the analysis detail page with an animated `ScoreGauge`, a What-is-working/What-needs-attention strengths-and-weaknesses split, an expandable requirement matrix with per-row confidence and an evidence explorer, and the journey progress indicator.
+- `features/recommendations` - the recommendations workspace for one analysis (Phase 5, Phase 6 visuals): findings grouped by priority with explicit Why/Evidence/Recommended-action fields, a safety badge on every row, a selection checkbox only where CVScanner can act safely, and the entry point into tailoring.
+- `features/tailoring` - the tailored-CV workspace (Phase 5, Phase 6 visuals): an honest progress timeline, before/after `ScoreGauge`s (identical when tailoring did not move the score - never implying an improvement that didn't happen), a factual-consistency summary, and every change shown as a paper-styled document card with its diff - accepted or rejected, never hidden.
+- `features/templates` (new, Phase 6) - `cv-document-renderer`, the one data-driven component rendering a `CandidateProfile` through six ATS-friendly templates via CSS variation only; `template-gallery` (`/templates`) previews all six at full size.
+- `settings` - still a placeholder page (later phase).
 - `styles/` - the design system: tokens (`_tokens.scss`), typography (`_typography.scss`), and shared mixins (`_mixins.scss`). See [Design system](#design-system).
 
 ## Celery
@@ -260,21 +273,27 @@ Angular 19, standalone components, feature-based architecture:
 
 ## Design system
 
-The frontend uses a bespoke design language (Angular has no equivalent
-to Tailwind/shadcn in this stack) rather than a generic dashboard
-aesthetic: a serif display face (Newsreader) for headings paired with a
-humanist sans (IBM Plex Sans) for UI text and a mono (IBM Plex Mono) for
-data/evidence, one accent color (terracotta) used consistently, mostly-sharp
-surfaces with pill shapes reserved for status/skill chips, and layout
-variety (an editorial document view for profiles, a split upload
-workspace, a processing timeline, and now a segmented analysis
-workspace) instead of repeating a card-grid pattern. Phase 4 added a
-separate semantic color system for match states (`--match-positive`,
-`--match-attention`, `--match-negative`, `--match-neutral`,
-`--match-semantic`) - visually coherent with but never reused from the
-document processing-status colors, and never color alone (always paired
-with an icon and a text label). See `frontend/src/styles/_tokens.scss`
-for the full token set.
+Phase 6 replaced the frontend's visual identity outright rather than
+extending the prior one: a document-first, precision/measurement register
+instead of an editorial reading register. Headings, scores, and document
+titles use Space Grotesk (a confident geometric grotesk); UI text stays
+IBM Plex Sans and data/evidence stays IBM Plex Mono. One brand accent
+(a deep signal blue) drives every primary action and "actively
+processing" state; a decoupled semantic palette
+(`--positive`/`--attention`/`--negative`/`--inferred`, aliased for call-site
+clarity as `--match-*` and `--status-*`) means a color always means the
+same thing everywhere, and the brand accent never doubles as a warning
+color the way the prior terracotta accent did. CV/job documents render
+onto a distinct "paper" surface family (`--paper-surface`, `--paper-border`,
+`--paper-ink`, `--shadow-document`) that stays paper-like even in dark
+mode, so a document always reads as a real document rather than another
+UI panel. Mostly-sharp surfaces, pill shapes reserved for chips, and
+layout variety (a derived-applications workspace, a guided document
+upload journey, an animated score gauge, a live CV editor with template
+switching) instead of a repeating card-grid dashboard pattern. See
+`frontend/src/styles/_tokens.scss` for the full token set and
+[docs/architecture/phase-6-frontend-redesign.md](docs/architecture/phase-6-frontend-redesign.md)
+for the full rationale.
 
 Phase 3 added a single icon family (Lucide, via `@ng-icons`, registered
 once in `core/icons.ts`) used for navigation, section headers, document
@@ -353,6 +372,19 @@ proficiency) render through one shared `entity-tag` primitive.
   provider failure or a rejected claim falls back to the original text,
   never a crash and never invented filler. See
   [ADR 0004](docs/adr/0004-truth-layer-independent-claim-validation.md).
+- **DOCX export is not implemented.** The CV editor exports PDF via a
+  scoped print stylesheet (no new dependency, exact template fidelity).
+  DOCX would need either a new client-side library or backend work and
+  was deliberately deferred rather than shipped as a non-functional
+  button - see
+  [docs/architecture/phase-6-frontend-redesign.md](docs/architecture/phase-6-frontend-redesign.md).
+- **CV editor edits are client-side only and are not saved anywhere.**
+  Reordering sections, hiding sections, rewording text, and removing
+  entries all happen in-memory and feed only the live preview and PDF
+  export; refreshing or navigating away loses in-progress edits, and
+  nothing written there can ever reach the Truth Layer's "verified
+  candidate fact" data - see
+  [ADR 0005](docs/adr/0005-cv-editor-stays-client-side.md).
 - **No ESLint configuration for the frontend** - Angular 19's `ng new` no
   longer scaffolds one by default. `make lint-frontend` runs TypeScript's
   type-checker instead; adding ESLint is left for when the team defines a
@@ -371,7 +403,9 @@ proficiency) render through one shared `entity-tag` primitive.
 
 ## Roadmap
 
-- **Phase 6** - cover letter generation, richer document-level tailoring
-  (section reordering, summary rewriting), and claim validation for
-  content types beyond the five categories `domain/truth/` currently
-  checks.
+- **Phase 7** - DOCX export, persisted CV editor versions (a
+  deliberately separate data model from `CandidateProfile` - see
+  [ADR 0005](docs/adr/0005-cv-editor-stays-client-side.md)), cover
+  letter generation, richer document-level tailoring (section
+  reordering, summary rewriting), and claim validation for content
+  types beyond the five categories `domain/truth/` currently checks.
