@@ -7,6 +7,13 @@ import { RecommendationSafetyBadgeComponent } from '../recommendation-safety-bad
 
 const PRIORITY_ORDER: RecommendationPriority[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
+const PRIORITY_ICON: Record<RecommendationPriority, string> = {
+  CRITICAL: 'lucideTriangleAlert',
+  HIGH: 'lucideCircleAlert',
+  MEDIUM: 'lucideCircleDashed',
+  LOW: 'lucideMinus',
+};
+
 interface PriorityGroup {
   priority: RecommendationPriority;
   recommendations: Recommendation[];
@@ -27,9 +34,12 @@ interface PriorityGroup {
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @for (group of groups(); track group.priority) {
-      <section class="priority-group">
+    @for (group of groups(); track group.priority; let gi = $index) {
+      <section class="priority-group" [style.animation-delay.ms]="gi * 60">
         <h3 class="priority-group__heading" [attr.data-priority]="group.priority">
+          <span class="priority-group__icon">
+            <ng-icon [name]="priorityIcon(group.priority)" size="14" />
+          </span>
           {{ formatEnumLabel(group.priority) }}
           <span class="text-tertiary font-mono">{{ group.recommendations.length }}</span>
         </h3>
@@ -96,6 +106,12 @@ interface PriorityGroup {
     `
       .priority-group {
         margin-bottom: var(--space-5);
+        padding: var(--space-5);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        animation: priority-group-in var(--motion-slow) var(--motion-ease) both;
       }
       .priority-group__heading {
         display: flex;
@@ -105,15 +121,31 @@ interface PriorityGroup {
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: var(--ink-tertiary);
-        padding-bottom: var(--space-2);
+        padding-bottom: var(--space-3);
         border-bottom: 1px solid var(--border-subtle);
         margin-bottom: var(--space-2);
+      }
+      .priority-group__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: var(--radius-sm);
+        background: var(--surface-sunken);
+        color: inherit;
       }
       .priority-group__heading[data-priority='CRITICAL'] {
         color: var(--match-negative);
       }
+      .priority-group__heading[data-priority='CRITICAL'] .priority-group__icon {
+        background: var(--match-negative-tint);
+      }
       .priority-group__heading[data-priority='HIGH'] {
         color: var(--match-attention);
+      }
+      .priority-group__heading[data-priority='HIGH'] .priority-group__icon {
+        background: var(--match-attention-tint);
       }
       .recommendation-list {
         list-style: none;
@@ -122,18 +154,31 @@ interface PriorityGroup {
       }
       .recommendation-list__row {
         border-bottom: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        margin: 0 calc(var(--space-2) * -1);
+        transition: background var(--motion-fast) var(--motion-ease);
+      }
+      .recommendation-list__row:hover {
+        background: var(--surface-sunken);
+      }
+      .recommendation-list__row:last-child {
+        border-bottom: none;
       }
       .recommendation-list__summary {
         display: flex;
         align-items: center;
         gap: var(--space-3);
-        padding: var(--space-3) 0;
+        padding: var(--space-3) var(--space-2);
       }
       .recommendation-list__checkbox,
       .recommendation-list__checkbox-spacer {
         width: 16px;
         height: 16px;
         flex-shrink: 0;
+      }
+      .recommendation-list__checkbox {
+        accent-color: var(--accent);
+        cursor: pointer;
       }
       .recommendation-list__toggle {
         flex: 1;
@@ -206,6 +251,26 @@ interface PriorityGroup {
         color: var(--ink-secondary);
       }
 
+      @keyframes priority-group-in {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .priority-group {
+          animation: none;
+        }
+        .recommendation-list__row {
+          transition: none;
+        }
+      }
+
       @media (max-width: 640px) {
         .recommendation-list__toggle {
           grid-template-columns: 1fr 16px;
@@ -269,5 +334,9 @@ export class RecommendationListComponent {
 
   formatEnumLabel(value: string): string {
     return formatEnumLabel(value);
+  }
+
+  priorityIcon(priority: RecommendationPriority): string {
+    return PRIORITY_ICON[priority];
   }
 }

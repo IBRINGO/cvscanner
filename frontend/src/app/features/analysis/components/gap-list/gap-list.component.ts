@@ -24,8 +24,8 @@ import { Gap } from '../../models/analysis.model';
       </p>
     } @else {
       <ul class="gap-list">
-        @for (gap of gaps; track $index) {
-          <li class="gap-list__item" [attr.data-priority]="gap.priority">
+        @for (gap of gaps; track $index; let i = $index) {
+          <li class="gap-list__item" [attr.data-priority]="gap.priority" [style.animation-delay.ms]="i * 40">
             <div class="gap-list__marker" [attr.aria-label]="formatEnumLabel(gap.priority) + ' priority'"></div>
             <div class="gap-list__body">
               <div class="gap-list__head">
@@ -64,10 +64,26 @@ import { Gap } from '../../models/analysis.model';
         display: grid;
         grid-template-columns: 4px 1fr;
         gap: var(--space-3);
+        animation: gap-item-in var(--motion-slow) var(--motion-ease) both;
       }
       .gap-list__marker {
         border-radius: var(--radius-sm);
         background: var(--match-neutral);
+      }
+      @keyframes gap-item-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .gap-list__item {
+          animation: none;
+        }
       }
       .gap-list__item[data-priority='MANDATORY'] .gap-list__marker {
         background: var(--match-negative);

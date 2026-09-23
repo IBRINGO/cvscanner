@@ -27,7 +27,8 @@ import { ApplicationSessionService } from '../../../applications/services/applic
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a [routerLink]="['/analysis', analysisId]" class="recommendations-page__back text-secondary">
+    <a [routerLink]="['/analysis', analysisId]" class="recommendations-page__back">
+      <ng-icon name="lucideArrowLeft" size="15" />
       Back to analysis
     </a>
 
@@ -36,7 +37,7 @@ import { ApplicationSessionService } from '../../../applications/services/applic
     @if (candidateName() || jobTitle()) {
       <header class="recommendations-page__context">
         <div class="recommendations-page__party">
-          <ng-icon name="lucideUserRound" size="18" />
+          <span class="recommendations-page__party-icon"><ng-icon name="lucideUserRound" size="18" /></span>
           <div>
             <span class="text-tertiary">Candidate</span>
             <p>{{ candidateName() ?? 'Unnamed candidate' }}</p>
@@ -44,7 +45,9 @@ import { ApplicationSessionService } from '../../../applications/services/applic
         </div>
         <div class="recommendations-page__divider" aria-hidden="true"></div>
         <div class="recommendations-page__party">
-          <ng-icon name="lucideBriefcase" size="18" />
+          <span class="recommendations-page__party-icon recommendations-page__party-icon--job"
+            ><ng-icon name="lucideBriefcase" size="18"
+          /></span>
           <div>
             <span class="text-tertiary">Position</span>
             <p>{{ jobTitle() ?? 'Untitled role' }}</p>
@@ -72,19 +75,25 @@ import { ApplicationSessionService } from '../../../applications/services/applic
 
       @if (safeToTailorCount() > 0) {
         <section class="recommendations-page__tailor">
-          <h2>Create a tailored CV</h2>
+          <h2><span class="recommendations-page__tailor-icon"><ng-icon name="lucideSparkles" size="18" /></span>Create a tailored CV</h2>
           <p class="text-secondary">
             Choose how much CVScanner may rephrase. Nothing outside your verified experience is ever added.
           </p>
           <div class="recommendations-page__mode">
             <label class="recommendations-page__mode-option" [attr.data-checked]="mode() === 'CONSERVATIVE'">
-              <input type="radio" name="mode" value="CONSERVATIVE" [checked]="mode() === 'CONSERVATIVE'" (change)="mode.set('CONSERVATIVE')" />
-              <span class="recommendations-page__mode-title">Conservative</span>
+              <span class="recommendations-page__mode-head">
+                <input type="radio" name="mode" value="CONSERVATIVE" [checked]="mode() === 'CONSERVATIVE'" (change)="mode.set('CONSERVATIVE')" />
+                <ng-icon name="lucideShieldCheck" size="16" class="recommendations-page__mode-icon" />
+                <span class="recommendations-page__mode-title">Conservative</span>
+              </span>
               <span class="text-secondary">Reorder and normalize wording only.</span>
             </label>
             <label class="recommendations-page__mode-option" [attr.data-checked]="mode() === 'AGGRESSIVE_SAFE'">
-              <input type="radio" name="mode" value="AGGRESSIVE_SAFE" [checked]="mode() === 'AGGRESSIVE_SAFE'" (change)="mode.set('AGGRESSIVE_SAFE')" />
-              <span class="recommendations-page__mode-title">Aggressive but safe</span>
+              <span class="recommendations-page__mode-head">
+                <input type="radio" name="mode" value="AGGRESSIVE_SAFE" [checked]="mode() === 'AGGRESSIVE_SAFE'" (change)="mode.set('AGGRESSIVE_SAFE')" />
+                <ng-icon name="lucideZap" size="16" class="recommendations-page__mode-icon" />
+                <span class="recommendations-page__mode-title">Aggressive but safe</span>
+              </span>
               <span class="text-secondary">May rewrite bullets. Never invents facts.</span>
             </label>
           </div>
@@ -94,6 +103,7 @@ import { ApplicationSessionService } from '../../../applications/services/applic
             [disabled]="selectedIds().length === 0 || creating()"
             (click)="createTailoringPlan()"
           >
+            <ng-icon name="lucideSparkles" size="15" />
             {{ creating() ? 'Starting...' : 'Tailor ' + selectedIds().length + ' selected' }}
           </button>
           @if (createError()) {
@@ -106,10 +116,18 @@ import { ApplicationSessionService } from '../../../applications/services/applic
   styles: [
     `
       .recommendations-page__back {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
         margin-bottom: var(--space-5);
         font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--ink-secondary);
         text-decoration: none;
+        transition: color var(--motion-fast) var(--motion-ease);
+      }
+      .recommendations-page__back:hover {
+        color: var(--accent);
       }
       app-application-progress {
         display: block;
@@ -118,17 +136,35 @@ import { ApplicationSessionService } from '../../../applications/services/applic
       .recommendations-page__context {
         display: flex;
         align-items: center;
-        gap: var(--space-5);
-        padding-bottom: var(--space-5);
+        gap: var(--space-6);
+        padding: var(--space-5) var(--space-6);
         margin-bottom: var(--space-6);
-        border-bottom: 1px solid var(--border-subtle);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
         flex-wrap: wrap;
       }
       .recommendations-page__party {
         display: flex;
-        align-items: flex-start;
-        gap: var(--space-2);
+        align-items: center;
+        gap: var(--space-3);
         color: var(--ink-tertiary);
+      }
+      .recommendations-page__party-icon {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-pill);
+        background: var(--gradient-brand);
+        color: #fff;
+      }
+      .recommendations-page__party-icon--job {
+        background: var(--surface-sunken);
+        color: var(--ink-secondary);
       }
       .recommendations-page__party p {
         margin: 2px 0 0;
@@ -151,9 +187,27 @@ import { ApplicationSessionService } from '../../../applications/services/applic
       }
       .recommendations-page__tailor {
         margin-top: var(--space-6);
-        padding-top: var(--space-5);
-        border-top: 1px solid var(--border-subtle);
+        padding: var(--space-6);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
         max-width: 560px;
+      }
+      .recommendations-page__tailor h2 {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .recommendations-page__tailor-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
       }
       .recommendations-page__mode {
         display: grid;
@@ -162,15 +216,24 @@ import { ApplicationSessionService } from '../../../applications/services/applic
         margin: var(--space-4) 0;
       }
       .recommendations-page__mode-option {
-        display: grid;
-        grid-template-columns: 16px 1fr;
-        column-gap: var(--space-2);
-        row-gap: 2px;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
         padding: var(--space-4);
         border: 1px solid var(--border-subtle);
         border-radius: var(--radius-md);
         cursor: pointer;
-        transition: border-color var(--motion-fast) var(--motion-ease);
+        transition:
+          border-color var(--motion-fast) var(--motion-ease),
+          background var(--motion-fast) var(--motion-ease);
+      }
+      .recommendations-page__mode-head {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+      }
+      .recommendations-page__mode-icon {
+        color: var(--ink-tertiary);
       }
       .recommendations-page__mode-option:hover {
         border-color: var(--border-strong);
@@ -179,10 +242,12 @@ import { ApplicationSessionService } from '../../../applications/services/applic
         border-color: var(--accent);
         background: var(--accent-tint);
       }
+      .recommendations-page__mode-option[data-checked='true'] .recommendations-page__mode-icon {
+        color: var(--accent-strong);
+      }
       .recommendations-page__mode-option input {
-        grid-row: 1 / 3;
-        align-self: start;
-        margin-top: 3px;
+        accent-color: var(--accent);
+        cursor: pointer;
       }
       .recommendations-page__mode-title {
         font-weight: 600;
@@ -197,14 +262,24 @@ import { ApplicationSessionService } from '../../../applications/services/applic
         }
       }
       .recommendations-page__submit {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
         font: inherit;
-        font-weight: 500;
+        font-weight: 600;
         padding: var(--space-2) var(--space-5);
         border-radius: var(--radius-sm);
         border: none;
         background: var(--accent);
         color: white;
         cursor: pointer;
+        transition:
+          background var(--motion-fast) var(--motion-ease),
+          transform var(--motion-fast) var(--motion-ease);
+      }
+      .recommendations-page__submit:hover:not(:disabled) {
+        background: var(--accent-strong);
+        transform: translateY(-1px);
       }
       .recommendations-page__submit:disabled {
         opacity: 0.6;
@@ -214,6 +289,13 @@ import { ApplicationSessionService } from '../../../applications/services/applic
         margin-top: var(--space-3);
         color: var(--match-negative);
         font-size: var(--text-sm);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .recommendations-page__submit,
+        .recommendations-page__mode-option {
+          transition: none;
+        }
       }
 
       @media (max-width: 640px) {

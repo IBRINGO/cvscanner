@@ -24,8 +24,8 @@ import { RequirementEvaluation } from '../../models/analysis.model';
       </p>
     } @else {
       <ul class="strength-list">
-        @for (item of strengths; track $index) {
-          <li class="strength-list__item">
+        @for (item of strengths; track $index; let i = $index) {
+          <li class="strength-list__item" [style.animation-delay.ms]="i * 40">
             <ng-icon name="lucideCircleCheck" size="16" class="strength-list__icon" />
             <div class="strength-list__body">
               <span class="strength-list__requirement">
@@ -61,6 +61,22 @@ import { RequirementEvaluation } from '../../models/analysis.model';
         display: grid;
         grid-template-columns: 16px 1fr;
         gap: var(--space-3);
+        animation: strength-item-in var(--motion-slow) var(--motion-ease) both;
+      }
+      @keyframes strength-item-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .strength-list__item {
+          animation: none;
+        }
       }
       .strength-list__icon {
         color: var(--positive);

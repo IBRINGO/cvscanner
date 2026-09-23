@@ -27,12 +27,19 @@ const STAGE_INTERVAL_MS = 1400;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="analysis-processing" role="status" aria-live="polite">
-      <ng-icon name="lucideLoaderCircle" class="analysis-processing__spinner" size="20" />
-      <ul class="analysis-processing__stages">
-        @for (stage of stages; track stage; let i = $index) {
-          <li [attr.data-active]="i === activeIndex()">{{ stage }}</li>
-        }
-      </ul>
+      <span class="analysis-processing__spinner-ring">
+        <ng-icon name="lucideLoaderCircle" class="analysis-processing__spinner" size="22" />
+      </span>
+      <div class="analysis-processing__body">
+        <ul class="analysis-processing__stages">
+          @for (stage of stages; track stage; let i = $index) {
+            <li [attr.data-active]="i === activeIndex()" [attr.data-done]="i < activeIndex()">
+              <span class="analysis-processing__dot" aria-hidden="true"></span>
+              {{ stage }}
+            </li>
+          }
+        </ul>
+      </div>
     </div>
   `,
   styles: [
@@ -41,12 +48,26 @@ const STAGE_INTERVAL_MS = 1400;
         display: flex;
         align-items: center;
         gap: var(--space-5);
-        padding: var(--space-6) 0;
+        padding: var(--space-6);
         color: var(--ink-tertiary);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+      }
+      .analysis-processing__spinner-ring {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-pill);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
       }
       .analysis-processing__spinner {
         animation: analysis-processing-spin 0.9s linear infinite;
-        flex-shrink: 0;
       }
       .analysis-processing__stages {
         list-style: none;
@@ -54,12 +75,29 @@ const STAGE_INTERVAL_MS = 1400;
         padding: 0;
         display: flex;
         flex-direction: column;
-        gap: var(--space-1);
+        gap: var(--space-2);
       }
       .analysis-processing__stages li {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
         font-size: var(--text-sm);
         transition: color var(--motion-base) var(--motion-ease), opacity var(--motion-base) var(--motion-ease);
         opacity: 0.45;
+      }
+      .analysis-processing__dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--border-strong);
+        flex-shrink: 0;
+        transition: background var(--motion-base) var(--motion-ease);
+      }
+      .analysis-processing__stages li[data-done='true'] .analysis-processing__dot {
+        background: var(--positive);
+      }
+      .analysis-processing__stages li[data-active='true'] .analysis-processing__dot {
+        background: var(--accent);
       }
       .analysis-processing__stages li[data-active='true'] {
         color: var(--ink-primary);

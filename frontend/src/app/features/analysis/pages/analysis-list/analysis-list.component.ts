@@ -42,7 +42,7 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
         } @else {
           <form class="analysis-workspace__form" (submit)="onSubmit($event)">
             <label class="analysis-workspace__field">
-              <span>Candidate CV</span>
+              <span><ng-icon name="lucideFileText" size="14" />Candidate CV</span>
               <select [(ngModel)]="selectedCvId" name="cv" required>
                 <option [ngValue]="null" disabled>Choose a CV</option>
                 @for (cv of cvs(); track cv.id) {
@@ -50,8 +50,11 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
                 }
               </select>
             </label>
+            <span class="analysis-workspace__vs" aria-hidden="true">
+              <ng-icon name="lucideTarget" size="16" />
+            </span>
             <label class="analysis-workspace__field">
-              <span>Job offer</span>
+              <span><ng-icon name="lucideBriefcase" size="14" />Job offer</span>
               <select [(ngModel)]="selectedJobId" name="job" required>
                 <option [ngValue]="null" disabled>Choose a job offer</option>
                 @for (job of jobs(); track job.id) {
@@ -60,6 +63,7 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
               </select>
             </label>
             <button type="submit" class="analysis-workspace__submit" [disabled]="creating()">
+              <ng-icon name="lucideSparkles" size="15" />
               {{ creating() ? 'Starting...' : 'Run analysis' }}
             </button>
           </form>
@@ -72,16 +76,21 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
           <p class="text-secondary">No analyses yet. Run your first one to see it here.</p>
         } @else {
           <ul class="document-index">
-            @for (analysis of analyses(); track analysis.id) {
-              <li class="document-index__row">
+            @for (analysis of analyses(); track analysis.id; let i = $index) {
+              <li class="document-index__row" [style.animation-delay.ms]="i * 40">
                 <a [routerLink]="['/analysis', analysis.id]" class="document-index__link">
-                  <span class="document-index__name">
-                    {{ documentName(analysis.candidate_document_id) }} vs
-                    {{ documentName(analysis.job_document_id) }}
+                  <span class="document-index__icon">
+                    <ng-icon name="lucideTarget" size="16" />
                   </span>
-                  <span class="document-index__meta text-tertiary font-mono">{{
-                    analysis.created_at | date: 'mediumDate'
-                  }}</span>
+                  <span class="document-index__text">
+                    <span class="document-index__name">
+                      {{ documentName(analysis.candidate_document_id) }} vs
+                      {{ documentName(analysis.job_document_id) }}
+                    </span>
+                    <span class="document-index__meta text-tertiary font-mono">{{
+                      analysis.created_at | date: 'mediumDate'
+                    }}</span>
+                  </span>
                 </a>
                 <span class="analysis-workspace__badge" [attr.data-status]="analysis.status">
                   @if (analysis.status === 'COMPLETED' && analysis.overall_score !== null) {
@@ -109,6 +118,13 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
+        padding: var(--space-5);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        position: sticky;
+        top: var(--space-6);
       }
       .analysis-workspace__empty {
         display: inline-flex;
@@ -118,7 +134,7 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
       .analysis-workspace__form {
         display: flex;
         flex-direction: column;
-        gap: var(--space-4);
+        gap: var(--space-3);
         max-width: 420px;
       }
       .analysis-workspace__field {
@@ -128,6 +144,11 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
         font-size: var(--text-sm);
         color: var(--ink-secondary);
       }
+      .analysis-workspace__field span {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+      }
       .analysis-workspace__field select {
         font: inherit;
         padding: var(--space-2) var(--space-3);
@@ -135,48 +156,113 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
         border: 1px solid var(--border-strong);
         background: var(--surface-raised);
         color: var(--ink-primary);
+        transition: border-color var(--motion-fast) var(--motion-ease);
+      }
+      .analysis-workspace__field select:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      .analysis-workspace__vs {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        margin-left: -2px;
+        border-radius: var(--radius-pill);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        align-self: center;
       }
       .analysis-workspace__submit {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
         align-self: flex-start;
         font: inherit;
-        font-weight: 500;
+        font-weight: 600;
         padding: var(--space-2) var(--space-5);
         border-radius: var(--radius-sm);
         border: none;
         background: var(--accent);
         color: white;
         cursor: pointer;
-        transition: background var(--motion-fast) var(--motion-ease);
+        transition:
+          background var(--motion-fast) var(--motion-ease),
+          transform var(--motion-fast) var(--motion-ease);
       }
       .analysis-workspace__submit:hover:not(:disabled) {
         background: var(--accent-strong);
+        transform: translateY(-1px);
       }
       .analysis-workspace__submit:disabled {
         opacity: 0.6;
         cursor: default;
       }
+      .analysis-workspace__list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        padding: var(--space-5);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        max-height: calc(100vh - 160px);
+      }
       .analysis-workspace__list h2 {
-        margin-bottom: var(--space-4);
+        flex-shrink: 0;
       }
       .document-index {
         list-style: none;
         margin: 0;
         padding: 0;
         border-top: 1px solid var(--border-subtle);
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
       }
       .document-index__row {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: var(--space-3);
-        padding: var(--space-3) 0;
+        padding: var(--space-3) var(--space-2);
+        margin: 0 calc(var(--space-2) * -1);
         border-bottom: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        animation: document-row-in var(--motion-slow) var(--motion-ease) both;
+        transition: background var(--motion-fast) var(--motion-ease);
+      }
+      .document-index__row:hover {
+        background: var(--surface-sunken);
       }
       .document-index__link {
         display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        text-decoration: none;
+        min-width: 0;
+      }
+      .document-index__icon {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        transition: transform var(--motion-base) var(--motion-spring);
+      }
+      .document-index__row:hover .document-index__icon {
+        transform: scale(1.08);
+      }
+      .document-index__text {
+        display: flex;
         flex-direction: column;
         gap: 2px;
-        text-decoration: none;
         min-width: 0;
       }
       .document-index__name {
@@ -203,9 +289,36 @@ import { AnalysisApiService } from '../../services/analysis-api.service';
         color: var(--match-negative);
       }
 
+      @keyframes document-row-in {
+        from {
+          opacity: 0;
+          transform: translateX(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .document-index__row {
+          animation: none;
+        }
+        .document-index__icon,
+        .analysis-workspace__submit {
+          transition: none;
+        }
+      }
+
       @media (max-width: 900px) {
         .analysis-workspace {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .analysis-workspace__create {
+          position: static;
+        }
+        .analysis-workspace__list {
+          max-height: 480px;
         }
       }
     `,

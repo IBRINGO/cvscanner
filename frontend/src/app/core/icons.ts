@@ -53,6 +53,7 @@ import {
   lucideScanSearch,
   lucideSearch,
   lucideSettings,
+  lucideShieldCheck,
   lucideSparkles,
   lucideTarget,
   lucideTrash2,
@@ -61,6 +62,7 @@ import {
   lucideUserRound,
   lucideUsers,
   lucideX,
+  lucideZap,
 } from '@ng-icons/lucide';
 
 export const CVSCANNER_ICONS = {
@@ -112,6 +114,7 @@ export const CVSCANNER_ICONS = {
   lucideScanSearch,
   lucideSearch,
   lucideSettings,
+  lucideShieldCheck,
   lucideSparkles,
   lucideTarget,
   lucideTrash2,
@@ -120,4 +123,5 @@ export const CVSCANNER_ICONS = {
   lucideUserRound,
   lucideUsers,
   lucideX,
+  lucideZap,
 };

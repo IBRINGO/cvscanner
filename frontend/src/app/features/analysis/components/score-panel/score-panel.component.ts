@@ -5,6 +5,17 @@ import { ScoreGaugeComponent } from '../../../../shared/components/ui/score-gaug
 import { formatEnumLabel } from '../../../../shared/utils/format-label';
 import { ScoreBreakdown } from '../../models/analysis.model';
 
+const DIMENSION_ICON: Record<string, string> = {
+  skills: 'lucideCode',
+  experience: 'lucideBriefcase',
+  seniority: 'lucideLayers',
+  education: 'lucideGraduationCap',
+  certifications: 'lucideAward',
+  languages: 'lucideLanguages',
+  responsibilities: 'lucideListChecks',
+  domain: 'lucideNetwork',
+};
+
 /**
  * The overall-score presentation: an animated radial gauge - the
  * product's core visual claim is "we measured this" - paired with a
@@ -36,9 +47,12 @@ import { ScoreBreakdown } from '../../models/analysis.model';
       </div>
 
       <div class="score-panel__dimensions">
-        @for (dimension of breakdown.dimensions; track dimension.name) {
-          <div class="score-panel__row">
-            <span class="score-panel__row-label">{{ formatEnumLabel(dimension.name) }}</span>
+        @for (dimension of breakdown.dimensions; track dimension.name; let i = $index) {
+          <div class="score-panel__row" [style.animation-delay.ms]="i * 40">
+            <span class="score-panel__row-label">
+              <ng-icon [name]="dimensionIcon(dimension.name)" size="14" class="score-panel__row-icon" />
+              {{ formatEnumLabel(dimension.name) }}
+            </span>
             <div class="score-panel__bar-track">
               <div class="score-panel__bar-fill" [style.width.%]="dimension.score * 100"></div>
             </div>
@@ -92,13 +106,31 @@ import { ScoreBreakdown } from '../../models/analysis.model';
       }
       .score-panel__row {
         display: grid;
-        grid-template-columns: 132px 1fr 36px;
+        grid-template-columns: 148px 1fr 36px;
         align-items: center;
         gap: var(--space-3);
+        animation: score-row-in var(--motion-slow) var(--motion-ease) both;
       }
       .score-panel__row-label {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
         font-size: var(--text-sm);
         color: var(--ink-secondary);
+      }
+      .score-panel__row-icon {
+        color: var(--ink-tertiary);
+        flex-shrink: 0;
+      }
+      @keyframes score-row-in {
+        from {
+          opacity: 0;
+          transform: translateX(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
       }
       .score-panel__bar-track {
         height: 6px;
@@ -121,10 +153,16 @@ import { ScoreBreakdown } from '../../models/analysis.model';
         .score-panel__bar-fill {
           transition: none;
         }
+        .score-panel__row {
+          animation: none;
+        }
       }
       @media (max-width: 640px) {
         .score-panel__row {
-          grid-template-columns: 96px 1fr 32px;
+          grid-template-columns: 108px 1fr 32px;
+        }
+        .score-panel__row-label {
+          font-size: var(--text-xs);
         }
       }
     `,
@@ -150,5 +188,9 @@ export class ScorePanelComponent {
 
   formatEnumLabel(value: string): string {
     return formatEnumLabel(value);
+  }
+
+  dimensionIcon(name: string): string {
+    return DIMENSION_ICON[name] ?? 'lucideTarget';
   }
 }

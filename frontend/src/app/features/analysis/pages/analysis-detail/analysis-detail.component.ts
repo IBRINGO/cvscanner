@@ -41,14 +41,17 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
   viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <a routerLink="/analysis" class="analysis-detail__back text-secondary">Back to analyses</a>
+    <a routerLink="/analysis" class="analysis-detail__back">
+      <ng-icon name="lucideArrowLeft" size="15" />
+      Back to analyses
+    </a>
 
     <app-application-progress [current]="'analysis'" [completed]="['cv', 'job']" />
 
     @if (candidateName() || jobTitle()) {
       <header class="analysis-detail__context">
         <div class="analysis-detail__party">
-          <ng-icon name="lucideUserRound" size="18" />
+          <span class="analysis-detail__party-icon"><ng-icon name="lucideUserRound" size="18" /></span>
           <div>
             <span class="text-tertiary">Candidate</span>
             <p>{{ candidateName() ?? 'Unnamed candidate' }}</p>
@@ -56,7 +59,9 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
         </div>
         <div class="analysis-detail__divider" aria-hidden="true"></div>
         <div class="analysis-detail__party">
-          <ng-icon name="lucideBriefcase" size="18" />
+          <span class="analysis-detail__party-icon analysis-detail__party-icon--job"
+            ><ng-icon name="lucideBriefcase" size="18"
+          /></span>
           <div>
             <span class="text-tertiary">Position</span>
             <p>{{ jobTitle() ?? 'Untitled role' }}@if (jobCompany()) {, {{ jobCompany() }}}</p>
@@ -74,35 +79,50 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
           <app-analysis-processing />
         } @else if (status() === 'FAILED') {
           <section class="analysis-detail__error">
-            <h1>This analysis could not be completed</h1>
-            <p class="text-secondary">{{ errorMessage() ?? 'An unexpected error occurred.' }}</p>
-            <p class="text-tertiary">
-              The candidate and job profiles this analysis referenced are unaffected and remain available.
-            </p>
+            <span class="analysis-detail__error-icon" aria-hidden="true">
+              <ng-icon name="lucideTriangleAlert" size="20" />
+            </span>
+            <div>
+              <h1>This analysis could not be completed</h1>
+              <p class="text-secondary">{{ errorMessage() ?? 'An unexpected error occurred.' }}</p>
+              <p class="text-tertiary">
+                The candidate and job profiles this analysis referenced are unaffected and remain available.
+              </p>
+            </div>
           </section>
         } @else {
           @if (detail(); as analysis) {
             <div class="analysis-detail__workspace">
-              <section class="analysis-detail__section">
-                <h2><ng-icon name="lucideTarget" size="18" />ATS compatibility</h2>
+              <section class="analysis-detail__section" style="animation-delay: 0ms">
+                <h2><span class="analysis-detail__section-icon"><ng-icon name="lucideTarget" size="16" /></span>ATS compatibility</h2>
                 @if (analysis.score_breakdown) {
                   <app-score-panel [breakdown]="analysis.score_breakdown" [mandatoryGapCount]="mandatoryGapCount()" />
                 }
               </section>
 
-              <section class="analysis-detail__section analysis-detail__section--split">
+              <section class="analysis-detail__section analysis-detail__section--split" style="animation-delay: 60ms">
                 <div>
-                  <h2><ng-icon name="lucideCircleCheck" size="18" />What is working</h2>
+                  <h2>
+                    <span class="analysis-detail__section-icon analysis-detail__section-icon--positive"
+                      ><ng-icon name="lucideCircleCheck" size="16"
+                    /></span>
+                    What is working
+                  </h2>
                   <app-strength-list [evaluations]="analysis.requirement_evaluations" />
                 </div>
                 <div>
-                  <h2><ng-icon name="lucideCircleAlert" size="18" />What needs attention</h2>
+                  <h2>
+                    <span class="analysis-detail__section-icon analysis-detail__section-icon--attention"
+                      ><ng-icon name="lucideCircleAlert" size="16"
+                    /></span>
+                    What needs attention
+                  </h2>
                   <app-gap-list [gaps]="analysis.gaps" />
                 </div>
               </section>
 
-              <section class="analysis-detail__section">
-                <h2><ng-icon name="lucideListChecks" size="18" />Requirement matrix</h2>
+              <section class="analysis-detail__section" style="animation-delay: 120ms">
+                <h2><span class="analysis-detail__section-icon"><ng-icon name="lucideListChecks" size="16" /></span>Requirement matrix</h2>
                 <p class="text-tertiary analysis-detail__summary">
                   {{ analysis.requirement_summary.met }} met, {{ analysis.requirement_summary.partially_met }} partial,
                   {{ analysis.requirement_summary.not_met }} missing
@@ -124,10 +144,18 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
   styles: [
     `
       .analysis-detail__back {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
         margin-bottom: var(--space-5);
         font-size: var(--text-sm);
+        font-weight: 500;
+        color: var(--ink-secondary);
         text-decoration: none;
+        transition: color var(--motion-fast) var(--motion-ease);
+      }
+      .analysis-detail__back:hover {
+        color: var(--accent);
       }
       app-application-progress {
         display: block;
@@ -136,17 +164,35 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
       .analysis-detail__context {
         display: flex;
         align-items: center;
-        gap: var(--space-5);
-        padding-bottom: var(--space-5);
+        gap: var(--space-6);
+        padding: var(--space-5) var(--space-6);
         margin-bottom: var(--space-6);
-        border-bottom: 1px solid var(--border-subtle);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
         flex-wrap: wrap;
       }
       .analysis-detail__party {
         display: flex;
-        align-items: flex-start;
-        gap: var(--space-2);
+        align-items: center;
+        gap: var(--space-3);
         color: var(--ink-tertiary);
+      }
+      .analysis-detail__party-icon {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius-pill);
+        background: var(--gradient-brand);
+        color: #fff;
+      }
+      .analysis-detail__party-icon--job {
+        background: var(--surface-sunken);
+        color: var(--ink-secondary);
       }
       .analysis-detail__party p {
         margin: 2px 0 0;
@@ -161,14 +207,41 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
       .analysis-detail__workspace {
         display: flex;
         flex-direction: column;
-        gap: var(--space-7);
+        gap: var(--space-6);
         max-width: 860px;
+      }
+      .analysis-detail__section {
+        padding: var(--space-6);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        animation: analysis-section-in var(--motion-slow) var(--motion-ease) both;
       }
       .analysis-detail__section h2 {
         display: flex;
         align-items: center;
         gap: var(--space-2);
-        margin-bottom: var(--space-3);
+        margin-bottom: var(--space-4);
+      }
+      .analysis-detail__section-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        flex-shrink: 0;
+      }
+      .analysis-detail__section-icon--positive {
+        background: var(--positive-tint);
+        color: var(--positive);
+      }
+      .analysis-detail__section-icon--attention {
+        background: var(--attention-tint);
+        color: var(--attention);
       }
       .analysis-detail__section--split {
         display: grid;
@@ -187,12 +260,44 @@ const TERMINAL_STATUSES = new Set<AnalysisStatus>(['COMPLETED', 'FAILED']);
       }
       .analysis-detail__error {
         display: flex;
-        flex-direction: column;
+        align-items: flex-start;
         gap: var(--space-3);
         max-width: 560px;
+        padding: var(--space-6);
+        background: var(--negative-tint);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+      }
+      .analysis-detail__error-icon {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-raised);
+        color: var(--negative);
       }
       .analysis-detail__footer {
         font-size: var(--text-xs);
+      }
+
+      @keyframes analysis-section-in {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .analysis-detail__section {
+          animation: none;
+        }
       }
       @media (max-width: 640px) {
         .analysis-detail__context {

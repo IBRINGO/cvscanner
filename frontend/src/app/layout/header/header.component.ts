@@ -35,9 +35,18 @@ import { SidebarStateService } from '../sidebar/sidebar-state.service';
           CVScanner
         </a>
       </div>
-      @if (isLoading()) {
-        <span class="app-header__status" role="status">Working</span>
-      }
+      <div class="app-header__right">
+        @if (isLoading()) {
+          <span class="app-header__status" role="status">
+            <span class="app-header__status-dot" aria-hidden="true"></span>
+            Working
+          </span>
+        }
+        <a routerLink="/applications/new" class="app-header__cta">
+          <ng-icon name="lucideSparkles" size="15" />
+          <span>Start an application</span>
+        </a>
+      </div>
     </header>
   `,
   styles: [
@@ -101,9 +110,71 @@ import { SidebarStateService } from '../sidebar/sidebar-state.service';
         height: 100%;
         object-fit: contain;
       }
+      .app-header__right {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+      }
       .app-header__status {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-pill);
+        background: var(--accent-tint);
         font-size: var(--text-sm);
-        color: var(--accent);
+        font-weight: 500;
+        color: var(--accent-strong);
+      }
+      .app-header__status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: app-header-pulse 1.4s var(--motion-ease) infinite;
+      }
+      .app-header__cta {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        padding: var(--space-2) var(--space-4);
+        border-radius: var(--radius-pill);
+        background: var(--accent);
+        color: #fff;
+        font-size: var(--text-sm);
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+        transition:
+          background var(--motion-fast) var(--motion-ease),
+          transform var(--motion-fast) var(--motion-ease),
+          box-shadow var(--motion-fast) var(--motion-ease);
+      }
+      .app-header__cta:hover {
+        background: var(--accent-strong);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-document);
+      }
+
+      @keyframes app-header-pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.5);
+          opacity: 0.6;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .app-header__cta {
+          transition: none;
+        }
+        .app-header__status-dot {
+          animation: none;
+        }
       }
 
       @media (max-width: 767px) {
@@ -112,6 +183,12 @@ import { SidebarStateService } from '../sidebar/sidebar-state.service';
         }
         .app-header__menu-trigger {
           display: inline-flex;
+        }
+        .app-header__cta span {
+          display: none;
+        }
+        .app-header__cta {
+          padding: var(--space-2);
         }
       }
     `,
