@@ -119,6 +119,26 @@ const STAGE_ORDER: ApplicationStage[] = ['cv', 'job', 'analysis', 'recommendatio
           animation: none;
         }
       }
+
+      // Six full labels don't fit a phone-width card without scrolling
+      // or clipping - collapse to markers-only except the active step,
+      // so the whole journey stays visible at a glance.
+      @media (max-width: 480px) {
+        .progress {
+          overflow-x: visible;
+        }
+        .progress__label {
+          display: none;
+        }
+        .progress__step[data-state='active'] .progress__label {
+          display: inline;
+          margin-right: 0;
+        }
+        .progress__connector {
+          width: 12px;
+          margin-right: var(--space-1);
+        }
+      }
     `,
   ],
 })

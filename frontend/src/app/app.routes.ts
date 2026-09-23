@@ -6,12 +6,12 @@ export const routes: Routes = [
     path: '',
     component: MainLayoutComponent,
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: '', redirectTo: 'workspace', pathMatch: 'full' },
       {
-        path: 'dashboard',
+        path: 'workspace',
         loadComponent: () =>
-          import('./features/dashboard/pages/dashboard-page/dashboard-page.component').then(
-            (m) => m.DashboardPageComponent,
+          import('./features/workspace/pages/workspace-page/workspace-page.component').then(
+            (m) => m.WorkspacePageComponent,
           ),
       },
       {
