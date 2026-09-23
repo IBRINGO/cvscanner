@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Applications', path: '/applications', icon: 'lucideFolder' },
   { label: 'CV Library', path: '/cvs', icon: 'lucideFileText' },
   { label: 'Job Library', path: '/jobs', icon: 'lucideBriefcase' },
+  { label: 'Templates', path: '/templates', icon: 'lucideLayers' },
   { label: 'Analysis', path: '/analysis', icon: 'lucideScanSearch' },
   { label: 'Recommendations', path: '/recommendations', icon: 'lucideListChecks' },
   { label: 'Tailoring', path: '/tailoring', icon: 'lucideGitBranch' },

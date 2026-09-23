@@ -51,7 +51,12 @@ describe('CvEditorComponent', () => {
       providers: [
         provideRouter([]),
         { provide: CvApiService, useValue: cvApiSpy },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 'cv-1' }) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ id: 'cv-1' }), queryParamMap: convertToParamMap({}) },
+          },
+        },
       ],
     });
     fixture = TestBed.createComponent(CvEditorComponent);
@@ -121,6 +126,33 @@ describe('CvEditorComponent', () => {
     expect(component.profile()?.skills.map((s) => s.raw_text)).toEqual(['Django']);
   });
 
+  it('preselects the template requested via the ?template= query param', () => {
+    const cvApiSpy = jasmine.createSpyObj('CvApiService', {
+      getProfile: of({ document_id: 'cv-1', status: 'PROCESSED', profile: profile() }),
+    });
+    TestBed.configureTestingModule({
+      imports: [CvEditorComponent],
+      providers: [
+        provideRouter([]),
+        { provide: CvApiService, useValue: cvApiSpy },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              paramMap: convertToParamMap({ id: 'cv-1' }),
+              queryParamMap: convertToParamMap({ template: 'modern-split' }),
+            },
+          },
+        },
+      ],
+    });
+    fixture = TestBed.createComponent(CvEditorComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(component.templateId()).toBe('modern-split');
+  });
+
   it('never sends edits to the backend - editing stays client-side', () => {
     const cvApiSpy = jasmine.createSpyObj('CvApiService', {
       getProfile: of({ document_id: 'cv-1', status: 'PROCESSED', profile: profile() }),
@@ -130,7 +162,12 @@ describe('CvEditorComponent', () => {
       providers: [
         provideRouter([]),
         { provide: CvApiService, useValue: cvApiSpy },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: 'cv-1' }) } } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ id: 'cv-1' }), queryParamMap: convertToParamMap({}) },
+          },
+        },
       ],
     });
     fixture = TestBed.createComponent(CvEditorComponent);

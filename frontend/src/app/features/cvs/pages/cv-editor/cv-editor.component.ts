@@ -251,6 +251,11 @@ export class CvEditorComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const requestedTemplate = this.route.snapshot.queryParamMap.get('template');
+    if (requestedTemplate && this.templates.some((t) => t.id === requestedTemplate)) {
+      this.templateId.set(requestedTemplate);
+    }
+
     if (!this.documentId) {
       this.loading.set(false);
       return;

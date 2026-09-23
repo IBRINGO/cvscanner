@@ -94,6 +94,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'templates',
+        loadComponent: () =>
+          import('./features/templates/pages/template-gallery/template-gallery.component').then(
+            (m) => m.TemplateGalleryComponent,
+          ),
+      },
+      {
         path: 'applications/new',
         loadComponent: () =>
           import(
