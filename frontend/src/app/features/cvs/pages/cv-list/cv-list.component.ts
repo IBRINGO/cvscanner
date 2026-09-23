@@ -1,16 +1,23 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { CVSCANNER_ICONS } from '../../../../core/icons';
 import { StatusBadgeComponent } from '../../../../shared/components/ui/status-badge/status-badge.component';
 import { UploadDropzoneComponent } from '../../../../shared/components/ui/upload-dropzone/upload-dropzone.component';
 import { DocumentSummary } from '../../../../shared/models/document.model';
 import { CvApiService } from '../../services/cv-api.service';
 
-const PIPELINE_STEPS = [
-  'Your file is stored and a text extraction pass begins',
-  'Sections such as Experience, Education, and Skills are detected',
-  'A structured candidate profile is built, fact by fact',
-  'Skills are matched against the CVScanner taxonomy where possible',
+interface PipelineStep {
+  icon: string;
+  text: string;
+}
+
+const PIPELINE_STEPS: PipelineStep[] = [
+  { icon: 'lucideFileUp', text: 'Your file is stored and a text extraction pass begins' },
+  { icon: 'lucideLayers', text: 'Sections such as Experience, Education, and Skills are detected' },
+  { icon: 'lucideFileCheck', text: 'A structured candidate profile is built, fact by fact' },
+  { icon: 'lucideNetwork', text: 'Skills are matched against the CVScanner taxonomy where possible' },
 ];
 
 /**
@@ -20,7 +27,8 @@ const PIPELINE_STEPS = [
 @Component({
   selector: 'app-cv-list-page',
   standalone: true,
-  imports: [UploadDropzoneComponent, StatusBadgeComponent, RouterLink, DatePipe],
+  imports: [UploadDropzoneComponent, StatusBadgeComponent, RouterLink, DatePipe, NgIcon],
+  viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="cv-workspace">
@@ -45,9 +53,17 @@ const PIPELINE_STEPS = [
 
         <div class="cv-workspace__pipeline">
           <h2>What happens next</h2>
-          <ol>
-            @for (step of pipelineSteps; track step) {
-              <li>{{ step }}</li>
+          <ol class="pipeline">
+            @for (step of pipelineSteps; track step.text; let i = $index; let last = $last) {
+              <li class="pipeline__step">
+                <span class="pipeline__marker">
+                  <ng-icon [name]="step.icon" size="15" />
+                </span>
+                @if (!last) {
+                  <span class="pipeline__line" aria-hidden="true"></span>
+                }
+                <span class="pipeline__text">{{ step.text }}</span>
+              </li>
             }
           </ol>
         </div>
@@ -59,13 +75,18 @@ const PIPELINE_STEPS = [
           <p class="text-secondary">Nothing uploaded yet. Your CVs will appear here.</p>
         } @else {
           <ul class="document-index">
-            @for (document of documents(); track document.id) {
-              <li class="document-index__row">
+            @for (document of documents(); track document.id; let i = $index) {
+              <li class="document-index__row" [style.animation-delay.ms]="i * 40">
                 <a [routerLink]="['/cvs', document.id]" class="document-index__link">
-                  <span class="document-index__name">{{ document.original_filename }}</span>
-                  <span class="document-index__meta text-tertiary font-mono">{{
-                    document.created_at | date: 'mediumDate'
-                  }}</span>
+                  <span class="document-index__icon">
+                    <ng-icon name="lucideFileText" size="16" />
+                  </span>
+                  <span class="document-index__text">
+                    <span class="document-index__name">{{ document.original_filename }}</span>
+                    <span class="document-index__meta text-tertiary font-mono">{{
+                      document.created_at | date: 'mediumDate'
+                    }}</span>
+                  </span>
                 </a>
                 <app-status-badge [status]="document.status" />
               </li>
@@ -87,6 +108,13 @@ const PIPELINE_STEPS = [
         display: flex;
         flex-direction: column;
         gap: var(--space-4);
+        padding: var(--space-5);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        position: sticky;
+        top: var(--space-6);
       }
       .cv-workspace__uploading {
         color: var(--accent);
@@ -95,36 +123,113 @@ const PIPELINE_STEPS = [
       .cv-workspace__pipeline {
         margin-top: var(--space-4);
       }
-      .cv-workspace__pipeline ol {
-        padding-left: var(--space-5);
+
+      .pipeline {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .pipeline__step {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-3);
+        padding-bottom: var(--space-5);
+      }
+      .pipeline__step:last-child {
+        padding-bottom: 0;
+      }
+      .pipeline__marker {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-pill);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        border: 1px solid var(--border-subtle);
+        z-index: 1;
+      }
+      .pipeline__line {
+        position: absolute;
+        top: 32px;
+        left: 15px;
+        bottom: 0;
+        width: 1.5px;
+        background: var(--border-subtle);
+      }
+      .pipeline__text {
+        padding-top: 6px;
         color: var(--ink-secondary);
         font-size: var(--text-sm);
+      }
+
+      .cv-workspace__list {
         display: flex;
         flex-direction: column;
-        gap: var(--space-2);
+        gap: var(--space-4);
+        padding: var(--space-5);
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        max-height: calc(100vh - 160px);
       }
       .cv-workspace__list h2 {
-        margin-bottom: var(--space-4);
+        flex-shrink: 0;
       }
       .document-index {
         list-style: none;
         margin: 0;
         padding: 0;
         border-top: 1px solid var(--border-subtle);
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
       }
       .document-index__row {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: var(--space-3);
-        padding: var(--space-3) 0;
+        padding: var(--space-3) var(--space-2);
+        margin: 0 calc(var(--space-2) * -1);
         border-bottom: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        animation: document-row-in var(--motion-slow) var(--motion-ease) both;
+        transition: background var(--motion-fast) var(--motion-ease);
+      }
+      .document-index__row:hover {
+        background: var(--surface-sunken);
       }
       .document-index__link {
         display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        text-decoration: none;
+        min-width: 0;
+      }
+      .document-index__icon {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        transition: transform var(--motion-base) var(--motion-spring);
+      }
+      .document-index__row:hover .document-index__icon {
+        transform: scale(1.08);
+      }
+      .document-index__text {
+        display: flex;
         flex-direction: column;
         gap: 2px;
-        text-decoration: none;
         min-width: 0;
       }
       .document-index__name {
@@ -138,9 +243,35 @@ const PIPELINE_STEPS = [
         font-size: var(--text-xs);
       }
 
+      @keyframes document-row-in {
+        from {
+          opacity: 0;
+          transform: translateX(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .document-index__row {
+          animation: none;
+        }
+        .document-index__icon {
+          transition: none;
+        }
+      }
+
       @media (max-width: 900px) {
         .cv-workspace {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .cv-workspace__upload {
+          position: static;
+        }
+        .cv-workspace__list {
+          max-height: 480px;
         }
       }
     `,

@@ -20,12 +20,16 @@ import { ApplicationView } from '../../models/application.model';
     <article class="app-card">
       <div class="app-card__docs">
         <span class="app-card__doc">
-          <ng-icon name="lucideFileText" size="15" />
+          <span class="app-card__doc-icon">
+            <ng-icon name="lucideFileText" size="15" />
+          </span>
           {{ app.cv.original_filename }}
         </span>
+        <ng-icon name="lucideArrowUpRight" size="13" class="app-card__doc-arrow" />
         <span class="app-card__doc">
-          <ng-icon name="lucideArrowUpRight" size="13" class="text-tertiary" />
-          <ng-icon name="lucideBriefcase" size="15" />
+          <span class="app-card__doc-icon app-card__doc-icon--job">
+            <ng-icon name="lucideBriefcase" size="15" />
+          </span>
           {{ app.job.original_filename }}
         </span>
       </div>
@@ -53,11 +57,21 @@ import { ApplicationView } from '../../models/application.model';
       .app-card {
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
-        padding: var(--space-4) var(--space-5);
+        gap: var(--space-4);
+        padding: var(--space-5);
         background: var(--surface-raised);
         border: 1px solid var(--border-subtle);
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-document);
+        transition:
+          transform var(--motion-base) var(--motion-spring),
+          box-shadow var(--motion-base) var(--motion-ease),
+          border-color var(--motion-base) var(--motion-ease);
+      }
+      .app-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-overlay);
+        border-color: var(--border-strong);
       }
       .app-card__docs {
         display: flex;
@@ -70,7 +84,26 @@ import { ApplicationView } from '../../models/application.model';
       .app-card__doc {
         display: inline-flex;
         align-items: center;
-        gap: var(--space-1);
+        gap: var(--space-2);
+      }
+      .app-card__doc-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: var(--radius-sm);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        flex-shrink: 0;
+      }
+      .app-card__doc-icon--job {
+        background: var(--surface-sunken);
+        color: var(--ink-secondary);
+      }
+      .app-card__doc-arrow {
+        color: var(--ink-tertiary);
+        flex-shrink: 0;
       }
       .app-card__footer {
         display: flex;
@@ -78,7 +111,7 @@ import { ApplicationView } from '../../models/application.model';
         justify-content: space-between;
         flex-wrap: wrap;
         gap: var(--space-2) var(--space-3);
-        padding-top: var(--space-2);
+        padding-top: var(--space-3);
         border-top: 1px solid var(--border-subtle);
       }
       .app-card__score {
@@ -114,6 +147,12 @@ import { ApplicationView } from '../../models/application.model';
       }
       .app-card__action:hover {
         color: var(--accent-strong);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .app-card {
+          transition: none;
+        }
       }
     `,
   ],

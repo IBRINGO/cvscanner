@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { CVSCANNER_ICONS } from '../../../../core/icons';
 
 /**
  * Generic drag-and-drop file upload surface (section 42). Deliberately
@@ -9,6 +11,8 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal
 @Component({
   selector: 'app-upload-dropzone',
   standalone: true,
+  imports: [NgIcon],
+  viewProviders: [provideIcons(CVSCANNER_ICONS)],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -27,6 +31,9 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal
         (change)="onFileInputChange($event)"
       />
       <label [for]="inputId" class="dropzone__label">
+        <span class="dropzone__icon">
+          <ng-icon name="lucideFileUp" size="26" />
+        </span>
         <span class="dropzone__title">{{ title }}</span>
         <span class="dropzone__hint">{{ hint }}</span>
         <span class="dropzone__cta">Choose a file, or drop it here</span>
@@ -37,15 +44,25 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal
     `
       .dropzone {
         position: relative;
-        border: 1px dashed var(--border-strong);
-        border-radius: var(--radius-md);
+        border: 1.5px dashed var(--border-strong);
+        border-radius: var(--radius-lg);
         padding: var(--space-7) var(--space-5);
         text-align: center;
         background: var(--surface-raised);
+        transition:
+          border-color var(--motion-base) var(--motion-ease),
+          background var(--motion-base) var(--motion-ease),
+          box-shadow var(--motion-base) var(--motion-ease);
+      }
+      .dropzone:hover {
+        border-color: var(--accent);
+        box-shadow: var(--shadow-document);
       }
       .dropzone[data-dragover='true'] {
         border-color: var(--accent);
+        border-style: solid;
         background: var(--accent-tint);
+        box-shadow: var(--shadow-overlay);
       }
       .dropzone__input {
         position: absolute;
@@ -58,8 +75,32 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal
       .dropzone__label {
         display: flex;
         flex-direction: column;
+        align-items: center;
         gap: var(--space-2);
         pointer-events: none;
+      }
+      .dropzone__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        margin-bottom: var(--space-2);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-pill);
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        transition:
+          transform var(--motion-base) var(--motion-spring),
+          background var(--motion-base) var(--motion-ease);
+      }
+      .dropzone:hover .dropzone__icon {
+        transform: translateY(-3px) scale(1.05);
+      }
+      .dropzone[data-dragover='true'] .dropzone__icon {
+        background: var(--accent);
+        color: #fff;
+        transform: scale(1.1);
       }
       .dropzone__title {
         font-family: var(--font-display);
@@ -75,6 +116,16 @@ import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output, signal
         font-size: var(--text-sm);
         font-weight: 500;
         color: var(--accent);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .dropzone,
+        .dropzone__icon {
+          transition: none;
+        }
+        .dropzone:hover .dropzone__icon {
+          transform: none;
+        }
       }
     `,
   ],

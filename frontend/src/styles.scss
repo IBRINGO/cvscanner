@@ -15,7 +15,24 @@ body {
 }
 
 body {
-  background: var(--surface-base);
+  background-color: var(--surface-base);
+  background-image: url('/images/cvscanner-background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+// The background artwork is tuned for the light surface palette only -
+// in dark mode it fights the dark tokens, so fall back to the flat
+// --surface-base color (same [data-theme] convention as _tokens.scss).
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) body {
+    background-image: none;
+  }
+}
+:root[data-theme='dark'] body {
+  background-image: none;
 }
 
 a {

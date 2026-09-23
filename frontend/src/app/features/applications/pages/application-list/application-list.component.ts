@@ -36,8 +36,10 @@ import { buildApplications } from '../../utils/build-applications';
         </p>
       } @else {
         <div class="applications__list">
-          @for (app of applications(); track app.analysisId) {
-            <app-application-card [app]="app" />
+          @for (app of applications(); track app.analysisId; let i = $index) {
+            <div class="applications__item" [style.animation-delay.ms]="i * 50">
+              <app-application-card [app]="app" />
+            </div>
           }
         </div>
       }
@@ -49,7 +51,7 @@ import { buildApplications } from '../../utils/build-applications';
         display: flex;
         flex-direction: column;
         gap: var(--space-5);
-        max-width: 760px;
+        max-width: 960px;
       }
       .applications__header {
         display: flex;
@@ -59,7 +61,27 @@ import { buildApplications } from '../../utils/build-applications';
       .applications__list {
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
+        gap: var(--space-4);
+      }
+      .applications__item {
+        animation: applications-item-in var(--motion-slow) var(--motion-ease) both;
+      }
+
+      @keyframes applications-item-in {
+        from {
+          opacity: 0;
+          transform: translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .applications__item {
+          animation: none;
+        }
       }
     `,
   ],
