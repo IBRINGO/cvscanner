@@ -39,6 +39,15 @@ export class CvApiService {
     return this.api.get<CvProfileResponse>(`cvs/${documentId}/profile/`);
   }
 
+  /** Also removes everything derived from this CV server-side (its
+   * structured profile, any analysis run against it, recommendations,
+   * tailoring plans) - see the backend's DeleteDocument use case. Lets
+   * the exact same file be re-uploaded and freshly reprocessed instead
+   * of silently reusing the deleted document's old results. */
+  delete(documentId: string): Observable<void> {
+    return this.api.delete<void>(`cvs/${documentId}/`);
+  }
+
   /** Server-rendered A4 PDF for the editor's live (possibly edited,
    * unsaved) profile - a direct file download, not the browser's print
    * dialog. Rendering happens server-side so the PDF keeps real,

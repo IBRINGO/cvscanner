@@ -1,5 +1,5 @@
 from application.semantics.enrich_candidate_profile import EnrichCandidateProfile
-from domain.cv.entities import CandidateProfile, Contact, Education, Experience, Language
+from domain.cv.entities import CandidateProfile, Contact, Education, Experience, Language, Project
 from domain.skills.enrichment import TechnologyMentionScanner
 from domain.skills.taxonomy import SEED_SKILLS
 
@@ -9,6 +9,7 @@ class FakeCandidateEnrichmentRepository:
         self.experience_updates = None
         self.education_updates = None
         self.language_updates = None
+        self.project_updates = None
 
     def apply_experience_enrichment(self, document_id, updates):
         self.experience_updates = updates
@@ -18,6 +19,9 @@ class FakeCandidateEnrichmentRepository:
 
     def apply_language_enrichment(self, document_id, updates):
         self.language_updates = updates
+
+    def apply_project_enrichment(self, document_id, updates):
+        self.project_updates = updates
 
 
 class TestEnrichCandidateProfile:
@@ -92,6 +96,36 @@ class TestEnrichCandidateProfile:
 
         assert repository.experience_updates[0]["technologies"] == ["Django"]
 
+    def test_merges_prose_technology_mentions_for_projects(self):
+        # Regression: EnrichCandidateProfile used to scan experience prose
+        # for technology mentions but never touched profile.projects at
+        # all, even though the scanner module's own docstring names "a
+        # project blurb" as intended input - a project describing its
+        # stack only in prose (no explicit "Technologies:" line) surfaced
+        # zero technologies to the matching engine.
+        repository = FakeCandidateEnrichmentRepository()
+        profile = CandidateProfile(
+            full_name=None,
+            contact=Contact(),
+            summary=None,
+            projects=(
+                Project(
+                    name="Analytics Engine",
+                    description="Real-time pipeline built with Django, Redis, and PostgreSQL.",
+                    technologies=("Python",),
+                ),
+            ),
+        )
+        scanner = TechnologyMentionScanner(SEED_SKILLS)
+
+        EnrichCandidateProfile(repository).execute("doc-1", profile, scanner)
+
+        update = repository.project_updates[0]
+        assert update["technologies"][0] == "Python"  # explicit list preserved first
+        assert "Django" in update["technologies"]
+        assert "Redis" in update["technologies"]
+        assert "PostgreSQL" in update["technologies"]
+
     def test_normalizes_education_degree_level(self):
         repository = FakeCandidateEnrichmentRepository()
         profile = CandidateProfile(
@@ -140,3 +174,4 @@ class TestEnrichCandidateProfile:
         assert repository.experience_updates is None
         assert repository.education_updates is None
         assert repository.language_updates is None
+        assert repository.project_updates is None

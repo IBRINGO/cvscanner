@@ -47,6 +47,12 @@ class DjangoTailoringRepository:
     def mark_status(self, plan_id: str, status: TailoringStatus) -> None:
         DjangoTailoringPlan.objects.filter(id=plan_id).update(status=status.value)
 
+    def delete(self, plan_id: str) -> None:
+        # TailoringChange rows cascade automatically (on_delete=CASCADE,
+        # see apps/tailoring/models.py) - this never touches the parent
+        # Analysis or the CV/job documents behind it.
+        DjangoTailoringPlan.objects.filter(id=plan_id).delete()
+
     def mark_failed(self, plan_id: str, error_message: str) -> None:
         DjangoTailoringPlan.objects.filter(id=plan_id).update(
             status=TailoringStatus.FAILED.value, error_message=error_message, completed_at=timezone.now()

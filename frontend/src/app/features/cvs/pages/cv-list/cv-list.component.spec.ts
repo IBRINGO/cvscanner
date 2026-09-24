@@ -13,7 +13,7 @@ describe('CvListComponent', () => {
   let router: Router;
 
   function setup(documents: DocumentSummary[] = []): void {
-    cvApiSpy = jasmine.createSpyObj('CvApiService', ['list', 'upload']);
+    cvApiSpy = jasmine.createSpyObj('CvApiService', ['list', 'upload', 'delete']);
     cvApiSpy.list.and.returnValue(of(documents));
 
     TestBed.configureTestingModule({
@@ -81,5 +81,49 @@ describe('CvListComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance['uploading']()).toBe(false);
+  });
+
+  const document: DocumentSummary = {
+    id: 'doc-1',
+    document_type: 'CV',
+    original_filename: 'resume.pdf',
+    mime_type: 'application/pdf',
+    file_size: 100,
+    status: 'PROCESSED',
+    page_count: 1,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+
+  it('deletes a CV after confirmation and removes it from the list', () => {
+    setup([document]);
+    spyOn(window, 'confirm').and.returnValue(true);
+    cvApiSpy.delete.and.returnValue(of(undefined));
+
+    fixture.componentInstance.deleteDocument('doc-1');
+
+    expect(cvApiSpy.delete).toHaveBeenCalledWith('doc-1');
+    expect(fixture.componentInstance['documents']()).toEqual([]);
+  });
+
+  it('does nothing when the user cancels the confirmation', () => {
+    setup([document]);
+    spyOn(window, 'confirm').and.returnValue(false);
+
+    fixture.componentInstance.deleteDocument('doc-1');
+
+    expect(cvApiSpy.delete).not.toHaveBeenCalled();
+    expect(fixture.componentInstance['documents']()).toEqual([document]);
+  });
+
+  it('surfaces an error and keeps the CV in the list if deletion fails', () => {
+    setup([document]);
+    spyOn(window, 'confirm').and.returnValue(true);
+    cvApiSpy.delete.and.returnValue(throwError(() => new Error('boom')));
+
+    fixture.componentInstance.deleteDocument('doc-1');
+
+    expect(fixture.componentInstance['deleteError']()).toContain('Could not delete');
+    expect(fixture.componentInstance['documents']()).toEqual([document]);
   });
 });

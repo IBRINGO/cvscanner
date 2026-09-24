@@ -54,3 +54,22 @@ class TestTechnologyMentionScanner:
     def test_empty_skill_list_never_matches_anything(self):
         scanner = TechnologyMentionScanner(())
         assert scanner.scan("Django and Python everywhere") == []
+
+    def test_matches_the_plural_rest_apis_phrasing(self):
+        # Regression: REST's alias list only had the singular "rest api",
+        # and normalize_skill_name/the scanner's boundary regex both do
+        # exact matching with no plural stripping - "REST APIs" (the far
+        # more common real-world phrasing, used verbatim by both a real
+        # CV and a real job posting) silently matched nothing at all.
+        scanner = TechnologyMentionScanner(SEED_SKILLS)
+        found = {skill.canonical_name for skill in scanner.scan("Basic understanding of REST APIs.")}
+        assert "REST" in found
+
+    def test_matches_microservices(self):
+        # Regression: "Microservices" had no taxonomy entry whatsoever -
+        # not even as an alias of something else - so it could never
+        # resolve regardless of phrasing, despite being one of the most
+        # common requirements in backend job postings.
+        scanner = TechnologyMentionScanner(SEED_SKILLS)
+        found = {skill.canonical_name for skill in scanner.scan("Solid grasp of microservices architecture.")}
+        assert "Microservices" in found

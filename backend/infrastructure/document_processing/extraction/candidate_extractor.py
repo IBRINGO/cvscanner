@@ -15,6 +15,7 @@ contact, summary) have their Evidence returned separately in the second
 return value.
 """
 import re
+import unicodedata
 from collections.abc import Mapping
 
 from domain.cv.entities import (
@@ -45,11 +46,64 @@ _CONTACT_CONFIDENCE = 0.85
 _SKILL_MATCHED_CONFIDENCE = 0.95
 _SKILL_UNMATCHED_CONFIDENCE = 0.5
 
+_MONTH_RE = (
+    r"(?:jan(?:v(?:ier)?)?|f[eé]v(?:r(?:ier)?)?|mars?|avr(?:il)?|mai|juin?|juil(?:let)?|"
+    r"ao[uû]t|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|d[eé]c(?:embre)?|january|february|"
+    r"march|april|may|june|july|august|september|october|november|december)\.?"
+)
+_END_MARKERS_RE = r"present|current|pr[eé]sent|actuel(?:le)?|aujourd'?hui|en cours|[aà] ce jour"
+_DATE_TOKEN_RE = rf"(?:{_MONTH_RE}\s*\d{{4}}|\d{{4}}|{_MONTH_RE})"
+
+# A whole line that is JUST a date range - "January 2020 - Present",
+# "2013 - 2017". Anchored on both ends so a header line that merely ENDS
+# with a date (see _TRAILING_DATE_RANGE_RE below) never matches here -
+# that ambiguity matters: "January 2020 - Present" must never be parsed
+# as prefix="January", start="2020" (see _extract_date_range's ordering).
 _DATE_RANGE_RE = re.compile(
-    r"^(?P<start>[A-Za-z]+\.?\s*\d{4}|\d{4})\s*[-–—]\s*"
-    r"(?P<end>[A-Za-z]+\.?\s*\d{4}|\d{4}|present|current)\s*$",
+    rf"^(?P<start>{_MONTH_RE}\s*\d{{4}}|\d{{4}})\s*[-–—]\s*(?P<end>{_DATE_TOKEN_RE}|{_END_MARKERS_RE})\s*$",
     re.IGNORECASE,
 )
+# A line that ENDS with a date range after some other text - real-world
+# CV templates commonly put "Job Title ... Févr. - Juin 2026" all on one
+# line (title and dates sharing a row, dates often right-aligned) rather
+# than the "title\ndates" two-line shape this module's other fixtures
+# use. The start token also accepts a bare month with no year ("Févr.")
+# since French CVs commonly omit a repeated year when both dates fall in
+# the same year ("Juin - Août 2025").
+_TRAILING_DATE_RANGE_RE = re.compile(
+    rf"^(?P<prefix>.*?)\s+(?P<start>{_DATE_TOKEN_RE})\s*[-–—]\s*"
+    rf"(?P<end>{_DATE_TOKEN_RE}|{_END_MARKERS_RE})\s*$",
+    re.IGNORECASE,
+)
+# Bilingual "this is still ongoing" markers - matched against the end
+# date only (see _is_current_marker), never the start date, after
+# accent/case/punctuation folding so "Présent", "présent" and "present"
+# all match the one entry below.
+_CURRENT_MARKERS = frozenset(
+    {"present", "current", "actuel", "actuelle", "aujourdhui", "en cours", "a ce jour"}
+)
+
+# A project header line ends with a trailing, comma-separated "(Tech,
+# Tech, Tech)" list right after the project name - "Wassy -- Marketplace
+# Multi-Services (React, React Native, Node.js, Express, MongoDB, JWT)".
+# The comma requirement is what tells a real tech list apart from a
+# plain clarifying aside like "(notions)" or "(Spring)". Projects have
+# no dates to anchor on the way Experience entries do (see
+# _TRAILING_DATE_RANGE_RE), so this is the equivalent boundary signal
+# for a CV template that lists projects back-to-back with no blank line
+# between them (confirmed on a real CV: nine projects with zero
+# separation previously collapsed into one unusable block).
+_PROJECT_HEADER_RE = re.compile(r"^(?P<name>.+?)\s*\((?P<technologies>[^()]*,[^()]*)\)\s*$")
+
+
+def _fold(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text.strip().lower())
+    stripped = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9 ]", "", stripped)
+
+
+def _is_current_marker(text: str | None) -> bool:
+    return bool(text) and _fold(text) in _CURRENT_MARKERS
 
 
 class RuleBasedCandidateExtractor:
@@ -94,21 +148,21 @@ class RuleBasedCandidateExtractor:
         experiences = [
             experience
             for section in by_type.get(SectionType.EXPERIENCE, [])
-            for block in _split_blocks(section.body_text)
+            for block in _split_entries(section.body_text)
             if (experience := _parse_experience_block(document_id, section, block)) is not None
         ]
 
         education = [
             entry
             for section in by_type.get(SectionType.EDUCATION, [])
-            for block in _split_blocks(section.body_text)
+            for block in _split_entries(section.body_text)
             if (entry := _parse_education_block(document_id, section, block)) is not None
         ]
 
         projects = [
             project
             for section in by_type.get(SectionType.PROJECTS, [])
-            for block in _split_blocks(section.body_text)
+            for block in _split_project_entries(section.body_text)
             if (project := _parse_project_block(document_id, section, block)) is not None
         ]
 
@@ -233,8 +287,68 @@ def _split_blocks(body_text: str) -> list[str]:
     return [block.strip() for block in body_text.split("\n\n") if block.strip()]
 
 
+def _split_entries(body_text: str) -> list[str]:
+    """Splits a section's body into one chunk per CV entry.
+
+    A blank line is the primary boundary signal (`_split_blocks`), but
+    some real-world CV templates lay entries out with no vertical gap
+    between them at all - each entry's header line ("Job Title ... Févr.
+    - Juin 2026") is visually distinguishable by ending in a date range,
+    not by whitespace. When a blank-line block itself contains more than
+    one such header line, it is further split at each one - this is what
+    lets four back-to-back Experience entries with zero blank lines
+    between them (confirmed on a real CV) still come out as four
+    separate entries instead of one merged block with no usable title/
+    date structure.
+    """
+    chunks: list[str] = []
+    for block in _split_blocks(body_text):
+        lines = block.split("\n")
+        starts = [0]
+        for index in range(1, len(lines)):
+            extracted = _extract_date_range(lines[index])
+            if extracted is not None and extracted[0]:
+                starts.append(index)
+        if len(starts) == 1:
+            chunks.append(block)
+            continue
+        for start, end in zip(starts, [*starts[1:], len(lines)], strict=True):
+            chunk = "\n".join(lines[start:end]).strip()
+            if chunk:
+                chunks.append(chunk)
+    return chunks
+
+
+def _split_project_entries(body_text: str) -> list[str]:
+    """Mirrors `_split_entries` for the Projects section: a project
+    header is identified by a trailing "(Tech, Tech, ...)" list
+    (`_PROJECT_HEADER_RE`) rather than a date range, since projects don't
+    carry dates. Without this, a template that lists every project
+    back-to-back with no blank line between entries collapses the whole
+    section into a single block with no usable per-project structure.
+    """
+    chunks: list[str] = []
+    for block in _split_blocks(body_text):
+        lines = block.split("\n")
+        starts = [0]
+        for index in range(1, len(lines)):
+            if _PROJECT_HEADER_RE.match(lines[index].strip()):
+                starts.append(index)
+        if len(starts) == 1:
+            chunks.append(block)
+            continue
+        for start, end in zip(starts, [*starts[1:], len(lines)], strict=True):
+            chunk = "\n".join(lines[start:end]).strip()
+            if chunk:
+                chunks.append(chunk)
+    return chunks
+
+
 def _split_title_company(header: str) -> tuple[str | None, str | None]:
-    for separator in (" at ", " | ", " - ", ", "):
+    # " chez " is French for " at " (e.g. "Ingenieure chez Meridian
+    # Analytics") - checked before the more generic ", "/" - " separators
+    # so it wins the way " at " already does for English.
+    for separator in (" at ", " chez ", " | ", " - ", ", "):
         if separator in header:
             title, company = header.split(separator, 1)
             return title.strip() or None, company.strip() or None
@@ -248,6 +362,39 @@ def _split_date_range(line: str) -> tuple[str, str] | None:
     return match.group("start").strip(), match.group("end").strip()
 
 
+def _extract_date_range(line: str) -> tuple[str, str, str] | None:
+    """Finds a date range in `line`, returning (prefix, start, end).
+    `prefix` is "" when the whole line is just the date range (checked
+    first, via the stricter fully-anchored `_DATE_RANGE_RE`) - checking
+    that case first matters: "January 2020 - Present" must never be
+    parsed by the looser trailing-date pattern as prefix="January",
+    start="2020", since "January" alone also happens to satisfy that
+    pattern's bare-month start token.
+    """
+    stripped = line.strip()
+    if match := _DATE_RANGE_RE.match(stripped):
+        return "", match.group("start").strip(), match.group("end").strip()
+    if match := _TRAILING_DATE_RANGE_RE.match(stripped):
+        return match.group("prefix").strip(), match.group("start").strip(), match.group("end").strip()
+    return None
+
+
+def _looks_like_location(line: str) -> bool:
+    """A location line is short, comma-shaped ("San Francisco, CA",
+    "Paris, France"), and doesn't look like a description sentence or a
+    "Technologies:" line - digits disqualify it since a real location
+    almost never contains one (unlike a date range or a metric-laden
+    achievement bullet)."""
+    stripped = line.strip()
+    if not stripped or len(stripped) > 60 or "," not in stripped:
+        return False
+    if any(char.isdigit() for char in stripped):
+        return False
+    if stripped.lower().startswith("technologies"):
+        return False
+    return True
+
+
 def _parse_experience_block(
     document_id: str, section: DetectedSection, block: str
 ) -> Experience | None:
@@ -255,11 +402,35 @@ def _parse_experience_block(
     if not lines:
         return None
 
-    title, company = _split_title_company(lines[0])
+    header = lines[0]
     remaining = lines[1:]
     start_date = end_date = None
-    if remaining and (dates := _split_date_range(remaining[0])):
+
+    # Some real-world templates put the date range on the same line as
+    # the title (often right-aligned) rather than on its own line below -
+    # try that first, falling back to the "date on the next line" shape
+    # every synthetic fixture in this repo uses.
+    if (header_dates := _extract_date_range(header)) is not None and header_dates[0]:
+        header, start_date, end_date = header_dates
+    elif remaining and (dates := _split_date_range(remaining[0])):
         start_date, end_date = dates
+        remaining = remaining[1:]
+
+    title, company = _split_title_company(header)
+
+    location = None
+    # When the date lived on the header line (company never on that line
+    # to begin with), the very next line is commonly "Company, City"
+    # rather than a location on its own - split it instead of letting
+    # _looks_like_location swallow the whole thing as a bare location and
+    # silently drop the company name.
+    if company is None and remaining and _looks_like_location(remaining[0]):
+        company, _, location_part = remaining[0].partition(",")
+        company = company.strip() or None
+        location = location_part.strip() or None
+        remaining = remaining[1:]
+    elif remaining and _looks_like_location(remaining[0]):
+        location = remaining[0].strip()
         remaining = remaining[1:]
 
     achievements: list[str] = []
@@ -282,6 +453,8 @@ def _parse_experience_block(
         achievements=tuple(achievements),
         technologies=tuple(technologies),
         evidence=_section_evidence(document_id, section, block),
+        location=location,
+        is_current=_is_current_marker(end_date),
     )
 
 
@@ -292,11 +465,21 @@ def _parse_education_block(
     if not lines:
         return None
 
-    degree, institution = _split_title_company(lines[0])
+    header = lines[0]
     remaining = lines[1:]
     start_date = end_date = None
-    if remaining and (dates := _split_date_range(remaining[0])):
+
+    if (header_dates := _extract_date_range(header)) is not None and header_dates[0]:
+        header, start_date, end_date = header_dates
+    elif remaining and (dates := _split_date_range(remaining[0])):
         start_date, end_date = dates
+        remaining = remaining[1:]
+
+    degree, institution = _split_title_company(header)
+
+    location = None
+    if remaining and _looks_like_location(remaining[0]):
+        location = remaining[0].strip()
 
     return Education(
         institution=institution,
@@ -305,6 +488,7 @@ def _parse_education_block(
         start_date_raw=start_date,
         end_date_raw=end_date,
         evidence=_section_evidence(document_id, section, block),
+        location=location,
     )
 
 
@@ -315,6 +499,15 @@ def _parse_project_block(document_id: str, section: DetectedSection, block: str)
 
     name = lines[0]
     technologies: list[str] = []
+    # A title ending in "(Tech, Tech, ...)" (the same signal
+    # _split_project_entries splits on) doubles as the technology list
+    # when there is no separate explicit "Technologies:" line - real CVs
+    # commonly declare a project's stack this way instead.
+    header_match = _PROJECT_HEADER_RE.match(name)
+    if header_match:
+        name = header_match.group("name").strip()
+        technologies = split_delimited_tokens(header_match.group("technologies"))
+
     description_lines: list[str] = []
     for line in lines[1:]:
         if line.lower().startswith("technologies:"):

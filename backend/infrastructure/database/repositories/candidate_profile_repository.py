@@ -90,8 +90,10 @@ class DjangoCandidateProfileRepository:
                 candidate_profile=row,
                 title=experience.title,
                 company=experience.company,
+                location=experience.location,
                 start_date_raw=experience.start_date_raw,
                 end_date_raw=experience.end_date_raw,
+                is_current=experience.is_current,
                 description=experience.description,
                 achievements=list(experience.achievements),
                 technologies=list(experience.technologies),
@@ -104,6 +106,7 @@ class DjangoCandidateProfileRepository:
                 institution=education.institution,
                 degree=education.degree,
                 field_of_study=education.field_of_study,
+                location=education.location,
                 start_date_raw=education.start_date_raw,
                 end_date_raw=education.end_date_raw,
                 evidence=_persist_evidence(document_id, education.evidence),
@@ -115,6 +118,7 @@ class DjangoCandidateProfileRepository:
                 name=project.name,
                 description=project.description,
                 technologies=list(project.technologies),
+                evidence=_persist_evidence(document_id, project.evidence),
             )
 
         for certification in profile.certifications:
@@ -204,6 +208,8 @@ def _experience_from_row(row: Experience) -> DomainExperience:
         technologies=tuple(row.technologies),
         seniority=SeniorityLevel(row.seniority) if row.seniority else None,
         evidence=_evidence_from_row(row.evidence),
+        location=row.location,
+        is_current=row.is_current,
     )
 
 
@@ -216,6 +222,7 @@ def _education_from_row(row: Education) -> DomainEducation:
         end_date_raw=row.end_date_raw,
         degree_level=EducationLevel(row.degree_level) if row.degree_level else None,
         evidence=_evidence_from_row(row.evidence),
+        location=row.location,
     )
 
 
@@ -224,7 +231,7 @@ def _project_from_row(row: Project) -> DomainProject:
         name=row.name,
         description=row.description,
         technologies=tuple(row.technologies),
-        evidence=None,
+        evidence=_evidence_from_row(row.evidence),
     )
 
 
@@ -276,6 +283,13 @@ class DjangoCandidateEnrichmentRepository:
             row.seniority = update.get("seniority")
             row.technologies = update.get("technologies", row.technologies)
             row.save(update_fields=["seniority", "technologies"])
+
+    @transaction.atomic
+    def apply_project_enrichment(self, document_id: str, updates: list[dict]) -> None:
+        rows = list(Project.objects.filter(candidate_profile__document_id=document_id).order_by("id"))
+        for row, update in zip(rows, updates, strict=True):
+            row.technologies = update.get("technologies", row.technologies)
+            row.save(update_fields=["technologies"])
 
     @transaction.atomic
     def apply_education_enrichment(self, document_id: str, updates: list[dict]) -> None:

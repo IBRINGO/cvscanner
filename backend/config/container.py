@@ -16,6 +16,7 @@ from django.conf import settings
 
 from application.cv.extract_candidate_profile import ExtractCandidateProfile
 from application.cv.process_pipeline import ProcessCvDocumentPipeline
+from application.documents.delete_document import DeleteDocument
 from application.documents.parse_document import ParseDocument
 from application.documents.upload_document import UploadDocument
 from application.jobs.extract_job_profile import ExtractJobProfile
@@ -27,6 +28,7 @@ from application.semantics.enrich_candidate_profile import EnrichCandidateProfil
 from application.semantics.enrich_job_profile import EnrichJobProfile
 from application.semantics.generate_embeddings import GenerateSemanticEmbeddings
 from application.tailoring.create_tailoring_plan import CreateTailoringPlan
+from application.tailoring.delete_tailoring_plan import DeleteTailoringPlan
 from application.tailoring.run_tailoring import RunTailoring
 from domain.matching.weights import MATCHING_ENGINE_VERSION
 from domain.recommendations.config import RECOMMENDATION_ENGINE_VERSION
@@ -76,6 +78,18 @@ def build_file_storage() -> LocalFileStorage:
 
 def build_upload_document() -> UploadDocument:
     return UploadDocument(repository=build_document_repository(), storage=build_file_storage())
+
+
+def build_semantic_representation_repository() -> DjangoSemanticRepresentationRepository:
+    return DjangoSemanticRepresentationRepository()
+
+
+def build_delete_document() -> DeleteDocument:
+    return DeleteDocument(
+        repository=build_document_repository(),
+        storage=build_file_storage(),
+        semantic_repository=build_semantic_representation_repository(),
+    )
 
 
 def build_parse_document() -> ParseDocument:
@@ -191,6 +205,10 @@ def build_generate_recommendations() -> GenerateRecommendations:
 
 def build_tailoring_repository() -> DjangoTailoringRepository:
     return DjangoTailoringRepository()
+
+
+def build_delete_tailoring_plan() -> DeleteTailoringPlan:
+    return DeleteTailoringPlan(repository=build_tailoring_repository())
 
 
 def build_llm_provider() -> LLMProvider:

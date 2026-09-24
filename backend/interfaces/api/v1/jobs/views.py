@@ -9,9 +9,10 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from application.jobs.process_pipeline import PASTED_TEXT_PLACEHOLDER_FILENAME
 from apps.documents.models import Document
 from apps.jobs.models import JobProfile
-from config.container import build_upload_document
+from config.container import build_delete_document, build_upload_document
 from domain.documents.enums import DocumentType, ProcessingStatus
 from domain.documents.exceptions import DocumentValidationError
 from interfaces.api.v1.jobs.serializers import (
@@ -62,7 +63,7 @@ class JobListCreateView(APIView):
 
         text = request.data.get("text") if hasattr(request.data, "get") else None
         if text:
-            return text.encode("utf-8"), "job-offer.txt", "text/plain"
+            return text.encode("utf-8"), PASTED_TEXT_PLACEHOLDER_FILENAME, "text/plain"
 
         return None, "", ""
 
@@ -71,6 +72,11 @@ class JobDetailView(APIView):
     def get(self, request, document_id):
         document = get_object_or_404(Document, id=document_id, document_type=DocumentType.JOB_OFFER.value)
         return Response(DocumentSerializer(document).data)
+
+    def delete(self, request, document_id):
+        get_object_or_404(Document, id=document_id, document_type=DocumentType.JOB_OFFER.value)
+        build_delete_document().execute(str(document_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class JobStatusView(APIView):

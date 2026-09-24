@@ -60,4 +60,12 @@ describe('CvApiService', () => {
     const req = httpMock.expectOne('/api/v1/cvs/abc/profile/');
     req.flush({ document_id: 'abc', status: 'PROCESSED', profile: null });
   });
+
+  it('sends DELETE to /cvs/:id/', () => {
+    service.delete('abc').subscribe();
+
+    const req = httpMock.expectOne('/api/v1/cvs/abc/');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

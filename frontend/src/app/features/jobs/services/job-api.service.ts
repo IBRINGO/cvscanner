@@ -29,4 +29,11 @@ export class JobApiService {
   getProfile(documentId: string): Observable<JobProfileResponse> {
     return this.api.get<JobProfileResponse>(`jobs/${documentId}/profile/`);
   }
+
+  /** Also removes everything derived from this job offer server-side
+   * (its structured profile, any analysis run against it, recommendations,
+   * tailoring plans) - see the backend's DeleteDocument use case. */
+  delete(documentId: string): Observable<void> {
+    return this.api.delete<void>(`jobs/${documentId}/`);
+  }
 }

@@ -8,6 +8,7 @@ brief. A JobRequirement here is just a classified statement; nothing here
 decides whether any candidate satisfies it.
 """
 import re
+import unicodedata
 from collections.abc import Mapping
 
 from domain.documents.entities import DetectedSection, ParsedDocument
@@ -15,8 +16,8 @@ from domain.documents.enums import ExtractionMethod, SectionType
 from domain.documents.evidence import Evidence
 from domain.job.entities import JobProfile, JobRequirement
 from domain.job.enums import RequirementImportance, RequirementType
+from domain.skills.enrichment import TechnologyMentionScanner
 from domain.skills.entities import Skill
-from domain.skills.normalization import normalize_skill_name
 
 _SECTION_CONFIDENCE = 0.9
 _HEURISTIC_CONFIDENCE = 0.6
@@ -27,11 +28,39 @@ _LABEL_FIELDS = {
     "location": "location",
     "employment type": "employment_type",
     "seniority": "seniority",
+    # French equivalents (bilingual job-offer overhaul) - same target
+    # fields, just a different label the source document used.
+    "entreprise": "company",
+    "lieu": "location",
+    "localisation": "location",
+    "type de contrat": "employment_type",
+    "niveau": "seniority",
+    "seniorite": "seniority",
 }
-_EXPERIENCE_RE = re.compile(r"\d+\+?\s*(?:years?|yrs?)", re.IGNORECASE)
-_EDUCATION_RE = re.compile(r"\b(bachelor|master|phd|degree|diploma)\b", re.IGNORECASE)
-_REQUIRED_MARKERS = {"required", "must have", "requirements"}
-_PREFERRED_MARKERS = {"preferred", "nice to have", "bonus"}
+_EXPERIENCE_RE = re.compile(
+    r"\d+\+?\s*(?:years?|yrs?|ans?(?:\s+d'?experience)?)", re.IGNORECASE
+)
+_EDUCATION_RE = re.compile(
+    r"\b(bachelor|master|phd|degree|diploma|licence|doctorat|dipl[oô]me|bac\s*\+\s*\d)\b",
+    re.IGNORECASE,
+)
+_REQUIRED_MARKERS = {
+    "required",
+    "must have",
+    "requirements",
+    "requis",
+    "obligatoire",
+    "indispensable",
+}
+_PREFERRED_MARKERS = {
+    "preferred",
+    "nice to have",
+    "bonus",
+    "souhaite",
+    "souhaitable",
+    "atout",
+    "un plus",
+}
 
 
 class RuleBasedJobExtractor:
@@ -39,6 +68,14 @@ class RuleBasedJobExtractor:
 
     def __init__(self, skill_alias_index: Mapping[str, Skill]) -> None:
         self._skill_alias_index = skill_alias_index
+        # A requirement line is a full sentence ("Good knowledge of Java
+        # and Spring Boot."), not a bare skill name the way a CV's Skills
+        # section entry is - normalize_skill_name alone (exact whole-
+        # string matching) can never resolve one, since the sentence as a
+        # whole is never itself a canonical name or alias. The scanner
+        # finds the skill mentioned WITHIN the sentence instead (see
+        # _classify_requirement).
+        self._skill_scanner = TechnologyMentionScanner(tuple(dict.fromkeys(skill_alias_index.values())))
 
     def extract(
         self, *, document_id: str, parsed: ParsedDocument, sections: list[DetectedSection]
@@ -89,7 +126,7 @@ class RuleBasedJobExtractor:
         requirements = [
             requirement
             for section in by_type.get(SectionType.REQUIREMENTS, [])
-            for requirement in _parse_requirements(document_id, section, self._skill_alias_index)
+            for requirement in _parse_requirements(document_id, section, self._skill_scanner)
         ]
 
         profile = JobProfile(
@@ -134,13 +171,18 @@ def _guess_title(raw_text: str) -> str | None:
     return None
 
 
+def _fold(text: str) -> str:
+    normalized = unicodedata.normalize("NFKD", text.strip().lower())
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch))
+
+
 def _extract_labeled_fields(header_text: str) -> dict[str, str]:
     fields: dict[str, str] = {}
     for line in header_text.splitlines():
         if ":" not in line:
             continue
         label, _, value = line.partition(":")
-        key = _LABEL_FIELDS.get(label.strip().lower())
+        key = _LABEL_FIELDS.get(_fold(label))
         if key and value.strip():
             fields[key] = value.strip()
     return fields
@@ -152,7 +194,7 @@ def _bullet_lines(body_text: str) -> list[str]:
 
 
 def _parse_requirements(
-    document_id: str, section: DetectedSection, skill_alias_index: Mapping[str, Skill]
+    document_id: str, section: DetectedSection, skill_scanner: TechnologyMentionScanner
 ) -> list[JobRequirement]:
     results: list[JobRequirement] = []
     importance = RequirementImportance.REQUIRED
@@ -162,7 +204,7 @@ def _parse_requirements(
         if not line:
             continue
 
-        normalized = line.rstrip(":").strip().lower()
+        normalized = _fold(line.rstrip(":"))
         if normalized in _REQUIRED_MARKERS:
             importance = RequirementImportance.REQUIRED
             continue
@@ -170,9 +212,7 @@ def _parse_requirements(
             importance = RequirementImportance.PREFERRED
             continue
 
-        results.append(
-            _classify_requirement(document_id, section, line, importance, skill_alias_index)
-        )
+        results.append(_classify_requirement(document_id, section, line, importance, skill_scanner))
 
     return results
 
@@ -182,9 +222,22 @@ def _classify_requirement(
     section: DetectedSection,
     line: str,
     importance: RequirementImportance,
-    skill_alias_index: Mapping[str, Skill],
+    skill_scanner: TechnologyMentionScanner,
 ) -> JobRequirement:
-    skill = normalize_skill_name(line, skill_alias_index)
+    # A bullet is rarely just a bare skill name ("Python") - it is far
+    # more often a full sentence naming one (or several) skills inside a
+    # larger claim ("Good knowledge of Java and Spring Boot.", "Basic
+    # understanding of REST APIs and backend-development principles.").
+    # Scanning for a mention anywhere in the line (rather than requiring
+    # the whole line to exactly equal a skill name/alias) is what lets
+    # realistically-phrased requirements resolve at all - previously
+    # every sentence-style requirement fell through to
+    # RequirementType.OTHER with skill=None, which the scoring engine
+    # silently never evaluates (see application/matching/scoring.py's
+    # _SKILL_REQUIREMENT_TYPES), so those requirements vanished from the
+    # analysis entirely instead of counting as a gap.
+    mentions = skill_scanner.scan(line)
+    skill = mentions[0] if mentions else None
     evidence = Evidence(
         source_document_id=document_id,
         text=line,

@@ -1,0 +1,12 @@
+# Local-only override (not committed): remaps host-side ports for postgres/redis
+# to avoid clashing with the Poramma backend stack's containers, which already
+# bind host 5432/6379. Internal service-to-service traffic (backend/worker ->
+# postgres/redis) uses the Docker network's service names and is unaffected by
+# these host-port changes.
+services:
+  postgres:
+    ports: !override
+      - "5433:5432"
+  redis:
+    ports: !override
+      - "6380:6379"

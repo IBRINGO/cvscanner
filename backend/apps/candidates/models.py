@@ -39,8 +39,14 @@ class Experience(models.Model):
     )
     title = models.CharField(max_length=200, null=True, blank=True)
     company = models.CharField(max_length=200, null=True, blank=True)
+    location = models.CharField(max_length=200, null=True, blank=True)
     start_date_raw = models.CharField(max_length=50, null=True, blank=True)
     end_date_raw = models.CharField(max_length=50, null=True, blank=True)
+    is_current = models.BooleanField(
+        default=False,
+        help_text="True when end_date_raw is a 'still ongoing' marker (Present/actuel/...) - see "
+        "infrastructure/document_processing/extraction/candidate_extractor.py::_is_current_marker.",
+    )
     description = models.TextField(null=True, blank=True)
     achievements = models.JSONField(default=list, blank=True)
     technologies = models.JSONField(default=list, blank=True)
@@ -66,6 +72,7 @@ class Education(models.Model):
     institution = models.CharField(max_length=200, null=True, blank=True)
     degree = models.CharField(max_length=200, null=True, blank=True)
     field_of_study = models.CharField(max_length=200, null=True, blank=True)
+    location = models.CharField(max_length=200, null=True, blank=True)
     start_date_raw = models.CharField(max_length=50, null=True, blank=True)
     end_date_raw = models.CharField(max_length=50, null=True, blank=True)
     degree_level = models.CharField(
@@ -91,6 +98,9 @@ class Project(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
     technologies = models.JSONField(default=list, blank=True)
+    evidence = models.ForeignKey(
+        "documents.Evidence", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
 
     class Meta:
         ordering = ["id"]

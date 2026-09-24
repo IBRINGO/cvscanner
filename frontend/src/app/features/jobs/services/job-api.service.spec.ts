@@ -49,4 +49,12 @@ describe('JobApiService', () => {
     const req = httpMock.expectOne('/api/v1/jobs/abc/profile/');
     req.flush({ document_id: 'abc', status: 'PROCESSED', profile: null });
   });
+
+  it('sends DELETE to /jobs/:id/', () => {
+    service.delete('abc').subscribe();
+
+    const req = httpMock.expectOne('/api/v1/jobs/abc/');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

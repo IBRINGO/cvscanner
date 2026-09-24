@@ -386,7 +386,12 @@ SEED_SKILLS: tuple[Skill, ...] = (
     Skill(
         "REST",
         SkillCategory.WEB,
-        aliases=("rest api", "restful"),
+        # "rest apis" (plural) is a distinct alias, not just "rest api" -
+        # normalize_skill_name does exact matching only (no plural
+        # stripping), so a CV/job posting using the plural form ("REST
+        # APIs", by far the more common phrasing) previously fell through
+        # to NO_EVIDENCE despite being the same skill.
+        aliases=("rest api", "rest apis", "restful", "restful api", "restful apis"),
         description="An architectural style for stateless HTTP APIs.",
         relations=(SkillRelation("GraphQL", _ALT),),
     ),
@@ -442,6 +447,17 @@ SEED_SKILLS: tuple[Skill, ...] = (
         SkillCategory.METHODOLOGY,
         parent_skill="Agile",
         description="A framework for applying Agile through fixed-length sprints.",
+    ),
+    # Was entirely absent from the seed taxonomy despite being one of the
+    # most common requirements in backend job postings - any CV/job text
+    # naming it verbatim previously had no taxonomy entry to resolve to
+    # at all (not even a fuzzy/partial match), unlike a misspelled alias.
+    Skill(
+        "Microservices",
+        SkillCategory.METHODOLOGY,
+        aliases=("microservice", "microservices architecture"),
+        description="An architectural style structuring an application as a suite of small, "
+        "independently deployable services.",
     ),
     # Software / tools
     Skill(

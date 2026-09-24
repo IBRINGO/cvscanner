@@ -49,4 +49,11 @@ describe('TailoringApiService', () => {
     service.getStatus('plan-1').subscribe();
     httpMock.expectOne('http://test/api/v1/tailoring/plan-1/status/').flush({});
   });
+
+  it('sends DELETE to remove a plan by id', () => {
+    service.delete('plan-1').subscribe();
+    const req = httpMock.expectOne('http://test/api/v1/tailoring/plan-1/');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

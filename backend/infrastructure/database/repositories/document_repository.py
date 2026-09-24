@@ -63,8 +63,22 @@ class DjangoDocumentRepository:
     def get_storage_reference(self, document_id: str) -> str:
         return DjangoDocument.objects.values_list("storage_reference", flat=True).get(id=document_id)
 
+    def delete(self, document_id: str) -> None:
+        # Every downstream row (CandidateProfile/JobProfile and their
+        # children, Analysis on either side, Recommendation, TailoringPlan
+        # and its TailoringChange rows, Evidence) is wired with
+        # on_delete=CASCADE (see apps/*/models.py) - Django's delete()
+        # collects and removes the whole graph in one atomic transaction.
+        # SemanticRepresentation is the one exception (a loose entity_id
+        # key, not a real FK) - callers must sweep it separately, see
+        # application/documents/delete_document.py.
+        DjangoDocument.objects.filter(id=document_id).delete()
+
     def update_status(self, document_id: str, status: ProcessingStatus) -> None:
         DjangoDocument.objects.filter(id=document_id).update(status=status.value)
+
+    def update_original_filename(self, document_id: str, filename: str) -> None:
+        DjangoDocument.objects.filter(id=document_id).update(original_filename=filename)
 
     def save_parsed_result(
         self, document_id: str, *, raw_text: str, page_count: int | None, sections: list[dict]

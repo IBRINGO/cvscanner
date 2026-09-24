@@ -35,4 +35,10 @@ export class TailoringApiService {
   getStatus(planId: string): Observable<TailoringStatusResponse> {
     return this.api.get<TailoringStatusResponse>(`tailoring/${planId}/status/`);
   }
+
+  /** Only removes this tailored-CV run - the analysis it came from, and
+   * the CV/job documents behind that analysis, are untouched. */
+  delete(planId: string): Observable<void> {
+    return this.api.delete<void>(`tailoring/${planId}/`);
+  }
 }

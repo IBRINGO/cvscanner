@@ -8,7 +8,7 @@ import uuid
 import pytest
 
 from apps.documents.models import Document
-from domain.cv.entities import CandidateProfile, CandidateSkillMention, Contact, Experience
+from domain.cv.entities import CandidateProfile, CandidateSkillMention, Contact, Experience, Project
 from domain.documents.enums import DocumentType, ExtractionMethod
 from domain.documents.evidence import Evidence
 from domain.job.entities import JobProfile, JobRequirement
@@ -89,6 +89,38 @@ class TestCandidateProfileRoundTrip:
 
     def test_get_returns_none_for_unknown_document(self):
         assert DjangoCandidateProfileRepository().get(str(uuid.uuid4())) is None
+
+    def test_get_reconstructs_a_profile_with_projects_without_crashing(self):
+        # Regression: DjangoCandidateProfileRepository.get() used to
+        # prefetch_related("projects__evidence") while the Project model
+        # had no `evidence` column at all - this raised AttributeError
+        # for ANY CandidateProfile with at least one project (silently
+        # never caught before because no existing fixture/test had one -
+        # see apps/candidates/migrations/0004_project_evidence.py).
+        document = _make_document(DocumentType.CV, "b" * 64)
+        document_id = str(document.id)
+        profile = CandidateProfile(
+            full_name="Ada Lovelace",
+            contact=Contact(email="ada@example.com"),
+            summary="Engineer",
+            projects=(
+                Project(
+                    name="Analytics Engine",
+                    description="Real-time analytics pipeline",
+                    technologies=("Python", "Kafka"),
+                    evidence=_evidence(document_id, "Analytics Engine (Python, Kafka)"),
+                ),
+            ),
+        )
+        repository = DjangoCandidateProfileRepository()
+        repository.save(document_id, profile, [])
+
+        loaded = repository.get(document_id)
+
+        assert loaded is not None
+        assert len(loaded.projects) == 1
+        assert loaded.projects[0].name == "Analytics Engine"
+        assert loaded.projects[0].evidence.text == "Analytics Engine (Python, Kafka)"
 
 
 class TestJobProfileRoundTrip:

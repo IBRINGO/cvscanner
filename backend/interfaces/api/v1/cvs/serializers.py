@@ -71,8 +71,10 @@ class ExperienceSerializer(serializers.ModelSerializer):
         fields = [
             "title",
             "company",
+            "location",
             "start_date_raw",
             "end_date_raw",
+            "is_current",
             "description",
             "achievements",
             "technologies",
@@ -90,6 +92,7 @@ class EducationSerializer(serializers.ModelSerializer):
             "institution",
             "degree",
             "field_of_study",
+            "location",
             "start_date_raw",
             "end_date_raw",
             "degree_level",
@@ -98,9 +101,11 @@ class EducationSerializer(serializers.ModelSerializer):
 
 
 class ProjectSerializer(serializers.ModelSerializer):
+    evidence = EvidenceSerializer(allow_null=True)
+
     class Meta:
         model = Project
-        fields = ["name", "description", "technologies"]
+        fields = ["name", "description", "technologies", "evidence"]
 
 
 class CertificationSerializer(serializers.ModelSerializer):

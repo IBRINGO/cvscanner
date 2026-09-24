@@ -77,11 +77,23 @@ const STATUS_LABELS: Record<TailoringStatus, string> = {
                 <span class="tailoring-hub__badge" [attr.data-status]="plan.status">
                   {{ statusLabels[plan.status] }}
                 </span>
+                <button
+                  type="button"
+                  class="document-index__delete"
+                  title="Delete"
+                  [disabled]="deletingIds().has(plan.id)"
+                  (click)="deletePlan(plan.id)"
+                >
+                  <ng-icon name="lucideTrash2" size="15" />
+                </button>
                 <ng-icon name="lucideArrowUpRight" size="16" class="text-tertiary" />
               </span>
             </li>
           }
         </ul>
+        @if (deleteError()) {
+          <p class="tailoring-hub__delete-error">{{ deleteError() }}</p>
+        }
       }
     </div>
   `,
@@ -185,6 +197,35 @@ const STATUS_LABELS: Record<TailoringStatus, string> = {
       .tailoring-hub__badge[data-status='VALIDATING'] {
         color: var(--accent);
       }
+      .document-index__delete {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: none;
+        color: var(--ink-tertiary);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+      }
+      .document-index__delete:hover:not(:disabled) {
+        background: var(--negative-tint);
+        color: var(--negative);
+      }
+      .document-index__delete:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .tailoring-hub__delete-error {
+        margin: var(--space-3) 0 0;
+        padding: var(--space-2) var(--space-3);
+        background: var(--negative-tint);
+        color: var(--negative);
+        border-radius: var(--radius-sm);
+        font-size: var(--text-sm);
+      }
 
       @keyframes tailoring-row-in {
         from {
@@ -214,6 +255,8 @@ export class TailoringHubComponent implements OnInit {
   protected readonly modeIcons = MODE_ICONS;
   protected readonly modeLabels = MODE_LABELS;
   protected readonly statusLabels = STATUS_LABELS;
+  protected readonly deletingIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly deleteError = signal<string | null>(null);
 
   constructor(private readonly tailoringApi: TailoringApiService) {}
 
@@ -224,6 +267,35 @@ export class TailoringHubComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  deletePlan(planId: string): void {
+    if (this.deletingIds().has(planId)) return;
+    const confirmed = window.confirm(
+      'Delete this tailored CV run? The analysis and CV/job documents it came from are not affected.',
+    );
+    if (!confirmed) return;
+
+    this.deleteError.set(null);
+    this.deletingIds.update((ids) => new Set(ids).add(planId));
+    this.tailoringApi.delete(planId).subscribe({
+      next: () => {
+        this.plans.update((plans) => plans.filter((plan) => plan.id !== planId));
+        this.clearDeleting(planId);
+      },
+      error: () => {
+        this.deleteError.set('Could not delete this tailoring run. Please try again.');
+        this.clearDeleting(planId);
+      },
+    });
+  }
+
+  private clearDeleting(planId: string): void {
+    this.deletingIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(planId);
+      return next;
     });
   }
 }

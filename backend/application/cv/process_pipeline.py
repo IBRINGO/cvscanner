@@ -34,6 +34,7 @@ import time
 from domain.cv.policies import detect_sections
 from domain.documents.enums import ProcessingStatus
 from domain.documents.exceptions import DocumentParsingError, DocumentValidationError
+from domain.documents.language import detect_language
 from domain.semantics.enums import SemanticEntityType
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,8 @@ class ProcessCvDocumentPipeline:
             self._repository.update_status(document_id, ProcessingStatus.PROCESSING)
 
             parsed = self._parse_document.execute(document_id, document.mime_type, document.original_filename)
-            sections = detect_sections(parsed)
+            language = detect_language(parsed.raw_text)
+            sections = detect_sections(parsed, language.language)
             self._repository.save_parsed_result(
                 document_id,
                 raw_text=parsed.raw_text,
@@ -124,4 +126,6 @@ def _section_to_dict(section) -> dict:
         "type": section.section_type.value,
         "heading": section.heading_text,
         "page_number": section.page_number,
+        "language": section.language.value if section.language else None,
+        "confidence": section.confidence,
     }

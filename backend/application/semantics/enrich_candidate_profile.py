@@ -35,6 +35,13 @@ class EnrichCandidateProfile:
         if experience_updates:
             self._repository.apply_experience_enrichment(document_id, experience_updates)
 
+        project_updates = [
+            {"technologies": _merge_project_technologies(project, scanner)}
+            for project in profile.projects
+        ]
+        if project_updates:
+            self._repository.apply_project_enrichment(document_id, project_updates)
+
         education_updates = [
             {"degree_level": normalize_education_level(education.degree).value}
             for education in profile.education
@@ -59,3 +66,8 @@ def _merge_technologies(experience, scanner: TechnologyMentionScanner) -> list[s
     # Union, preserving the explicit "Technologies:" list Phase 2 already
     # read (if any) before the prose-derived mentions, de-duplicated.
     return list(dict.fromkeys([*experience.technologies, *mentioned]))
+
+
+def _merge_project_technologies(project, scanner: TechnologyMentionScanner) -> list[str]:
+    mentioned = [skill.canonical_name for skill in scanner.scan(project.description or "")]
+    return list(dict.fromkeys([*project.technologies, *mentioned]))

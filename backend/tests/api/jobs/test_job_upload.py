@@ -20,6 +20,19 @@ class TestJobUpload:
         assert document.status == "PROCESSED"
         assert document.document_type == "JOB_OFFER"
 
+    def test_pasted_text_is_renamed_to_the_extracted_job_title(self, api_client, job_offer_text):
+        # sample_job_offer.txt's first line is "Senior Backend Engineer" -
+        # the placeholder "job-offer.txt" name every pasted submission
+        # starts with should be replaced by that once extraction runs.
+        response = api_client.post(reverse("job-list-create"), {"text": job_offer_text}, format="json")
+
+        document = Document.objects.get(id=response.data["id"])
+        assert document.original_filename == "Senior Backend Engineer"
+
+        list_response = api_client.get(reverse("job-list-create"))
+        listed = next(doc for doc in list_response.data if doc["id"] == str(document.id))
+        assert listed["original_filename"] == "Senior Backend Engineer"
+
     def test_processed_profile_distinguishes_required_and_preferred(self, api_client, job_offer_text):
         upload = api_client.post(reverse("job-list-create"), {"text": job_offer_text}, format="json")
 

@@ -44,6 +44,8 @@ class Experience:
     technologies: tuple[str, ...] = field(default_factory=tuple)
     seniority: SeniorityLevel | None = None
     evidence: Evidence | None = None
+    location: str | None = None
+    is_current: bool = False
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,7 @@ class Education:
     end_date_raw: str | None
     degree_level: EducationLevel | None = None
     evidence: Evidence | None = None
+    location: str | None = None
 
 
 @dataclass(frozen=True)

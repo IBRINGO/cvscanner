@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TailoringPlanSummary } from '../../models/tailoring.model';
 import { TailoringApiService } from '../../services/tailoring-api.service';
 import { TailoringHubComponent } from './tailoring-hub.component';
@@ -25,7 +25,7 @@ describe('TailoringHubComponent', () => {
   let tailoringApiSpy: jasmine.SpyObj<TailoringApiService>;
 
   function setup(plans: TailoringPlanSummary[]): void {
-    tailoringApiSpy = jasmine.createSpyObj('TailoringApiService', ['list']);
+    tailoringApiSpy = jasmine.createSpyObj('TailoringApiService', ['list', 'delete']);
     tailoringApiSpy.list.and.returnValue(of(plans));
 
     TestBed.configureTestingModule({
@@ -66,5 +66,39 @@ describe('TailoringHubComponent', () => {
     setup([plan({ id: 'plan-99' })]);
     const link = (fixture.nativeElement as HTMLElement).querySelector('a.document-index__link')!;
     expect(link.getAttribute('href')).toBe('/tailoring/plan-99');
+  });
+
+  it('deletes a plan after confirmation and removes it from the list', () => {
+    setup([plan({ id: 'plan-1' })]);
+    spyOn(window, 'confirm').and.returnValue(true);
+    tailoringApiSpy.delete.and.returnValue(of(undefined));
+
+    fixture.componentInstance.deletePlan('plan-1');
+
+    expect(tailoringApiSpy.delete).toHaveBeenCalledWith('plan-1');
+    expect(fixture.componentInstance['plans']()).toEqual([]);
+  });
+
+  it('does nothing when the user cancels the confirmation', () => {
+    const onePlan = plan({ id: 'plan-1' });
+    setup([onePlan]);
+    spyOn(window, 'confirm').and.returnValue(false);
+
+    fixture.componentInstance.deletePlan('plan-1');
+
+    expect(tailoringApiSpy.delete).not.toHaveBeenCalled();
+    expect(fixture.componentInstance['plans']()).toEqual([onePlan]);
+  });
+
+  it('surfaces an error and keeps the plan in the list if deletion fails', () => {
+    const onePlan = plan({ id: 'plan-1' });
+    setup([onePlan]);
+    spyOn(window, 'confirm').and.returnValue(true);
+    tailoringApiSpy.delete.and.returnValue(throwError(() => new Error('boom')));
+
+    fixture.componentInstance.deletePlan('plan-1');
+
+    expect(fixture.componentInstance['deleteError']()).toContain('Could not delete');
+    expect(fixture.componentInstance['plans']()).toEqual([onePlan]);
   });
 });

@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from application.tailoring.create_tailoring_plan import TailoringValidationError
 from apps.tailoring.models import TailoringPlan
-from config.container import build_create_tailoring_plan
+from config.container import build_create_tailoring_plan, build_delete_tailoring_plan
 from domain.tailoring.enums import TailoringMode
 from interfaces.api.v1.tailoring.serializers import (
     TailoringChangeSerializer,
@@ -63,6 +63,11 @@ class TailoringDetailView(APIView):
     def get(self, request, plan_id):
         plan = get_object_or_404(TailoringPlan, id=plan_id)
         return Response(TailoringPlanDetailSerializer(plan).data)
+
+    def delete(self, request, plan_id):
+        get_object_or_404(TailoringPlan, id=plan_id)
+        build_delete_tailoring_plan().execute(str(plan_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TailoringStatusView(APIView):

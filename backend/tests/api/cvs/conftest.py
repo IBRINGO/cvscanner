@@ -32,5 +32,13 @@ def unsupported_bytes():
     return (FIXTURES_DIR / "unsupported.exe").read_bytes()
 
 
+@pytest.fixture
+def fixture_bytes():
+    def _read(name: str) -> bytes:
+        return (FIXTURES_DIR / name).read_bytes()
+
+    return _read
+
+
 def make_upload(name: str, content: bytes, content_type: str) -> SimpleUploadedFile:
     return SimpleUploadedFile(name, content, content_type=content_type)

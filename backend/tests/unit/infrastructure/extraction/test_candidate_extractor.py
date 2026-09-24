@@ -79,6 +79,73 @@ class TestRuleBasedCandidateExtractorOnPDF:
         assert {"full_name", "email", "phone", "location"} <= fields
 
 
+class TestRuleBasedCandidateExtractorOnFrenchPDF:
+    def _extract(self, fixture_bytes, skill_alias_index):
+        parsed = PDFParser().parse(fixture_bytes("sample_cv_fr.pdf"), "sample_cv_fr.pdf")
+        sections = detect_sections(parsed)
+        extractor = RuleBasedCandidateExtractor(skill_alias_index)
+        return extractor.extract(document_id="doc-fr", parsed=parsed, sections=sections)
+
+    def test_extracts_identity_and_contact(self, fixture_bytes, skill_alias_index):
+        profile, _ = self._extract(fixture_bytes, skill_alias_index)
+
+        assert profile.full_name == "Camille Dubois"
+        assert profile.contact.email == "camille.dubois@example.fr"
+        assert profile.contact.location == "Paris, France"
+
+    def test_extracts_experience_with_french_dates_and_ongoing_marker(self, fixture_bytes, skill_alias_index):
+        profile, _ = self._extract(fixture_bytes, skill_alias_index)
+
+        assert len(profile.experiences) == 2
+        first = profile.experiences[0]
+        assert first.title == "Ingenieure back-end senior"
+        assert first.company == "Meridian Analytics"
+        assert first.start_date_raw == "Janvier 2020"
+        assert first.end_date_raw == "Present"
+        assert first.is_current is True
+        assert profile.experiences[1].is_current is False
+
+    def test_extracts_education_and_skills(self, fixture_bytes, skill_alias_index):
+        profile, _ = self._extract(fixture_bytes, skill_alias_index)
+
+        assert profile.education[0].institution == "Universite de Paris"
+        assert profile.education[0].degree == "Master en informatique"
+        skill_names = {mention.raw_text for mention in profile.skills}
+        assert "Python" in skill_names
+        assert "Django" in skill_names
+
+    def test_extracts_languages(self, fixture_bytes, skill_alias_index):
+        profile, _ = self._extract(fixture_bytes, skill_alias_index)
+        languages = {lang.name: lang.proficiency for lang in profile.languages}
+        assert languages == {"Francais": "Natif", "Anglais": "Courant"}
+
+
+class TestRuleBasedCandidateExtractorOnTwoColumnPDF:
+    def test_extracts_correctly_despite_two_column_layout(self, fixture_bytes, skill_alias_index):
+        parsed = PDFParser().parse(
+            fixture_bytes("sample_cv_two_column_en.pdf"), "sample_cv_two_column_en.pdf"
+        )
+        sections = detect_sections(parsed)
+        profile, _ = RuleBasedCandidateExtractor(skill_alias_index).extract(
+            document_id="doc-2col", parsed=parsed, sections=sections
+        )
+
+        assert profile.full_name == "Taylor Morgan"
+        skill_names = {mention.raw_text for mention in profile.skills}
+        assert {"Python", "Django", "PostgreSQL", "Docker", "Kubernetes", "Git"} <= skill_names
+
+        assert len(profile.experiences) == 2
+        assert profile.experiences[0].title == "Senior Platform Engineer"
+        assert profile.experiences[0].company == "Beacon Systems"
+        # The skills (left column) must not have bled into the experience
+        # (right column) description, which would happen if the columns
+        # were read in the wrong order or merged.
+        assert "Kubernetes" not in (profile.experiences[0].description or "")
+
+        assert len(profile.certifications) == 1
+        assert profile.certifications[0].name == "AWS Certified Developer"
+
+
 class TestRuleBasedCandidateExtractorEdgeCases:
     def test_cv_with_no_experience_section_produces_empty_experiences(self, skill_alias_index):
         from domain.documents.entities import ParsedDocument, ParsedPage
@@ -106,6 +173,38 @@ class TestRuleBasedCandidateExtractorEdgeCases:
         )
 
         assert profile.skills == ()
+
+    def test_projects_with_no_blank_lines_are_split_into_separate_entries(self, skill_alias_index):
+        # Regression: a real CV listed nine projects back-to-back with no
+        # blank line between them (each header line ending in a "(Tech,
+        # Tech, ...)" list instead) - the Projects section only ever used
+        # a blank-line split (_split_blocks), unlike Experience/Education
+        # which already had a no-blank-line fallback, so the whole
+        # section collapsed into one unusable Project with no
+        # technologies and no real evidence.
+        from domain.documents.entities import ParsedDocument, ParsedPage
+
+        text = (
+            "Alex Doe\n\n"
+            "PROJECTS\n"
+            "Wassy Marketplace (React, Node.js, MongoDB)\n"
+            "Multi-service platform with secure REST APIs and order tracking.\n"
+            "KS Express (React, Node.js, MongoDB)\n"
+            "Shipper-traveler matching platform with JWT authentication.\n"
+        )
+        parsed = ParsedDocument(raw_text=text, pages=[ParsedPage(1, text)])
+        sections = detect_sections(parsed)
+
+        profile, _ = RuleBasedCandidateExtractor(skill_alias_index).extract(
+            document_id="doc-5", parsed=parsed, sections=sections
+        )
+
+        assert len(profile.projects) == 2
+        assert profile.projects[0].name == "Wassy Marketplace"
+        assert profile.projects[0].technologies == ("React", "Node.js", "MongoDB")
+        assert "order tracking" in profile.projects[0].description
+        assert profile.projects[1].name == "KS Express"
+        assert "JWT authentication" in profile.projects[1].description
 
     def test_unrecognized_skill_kept_as_raw_text_not_dropped(self, skill_alias_index):
         from domain.documents.entities import ParsedDocument, ParsedPage

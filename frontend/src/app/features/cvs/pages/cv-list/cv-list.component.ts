@@ -88,10 +88,24 @@ const PIPELINE_STEPS: PipelineStep[] = [
                     }}</span>
                   </span>
                 </a>
-                <app-status-badge [status]="document.status" />
+                <span class="document-index__row-end">
+                  <app-status-badge [status]="document.status" />
+                  <button
+                    type="button"
+                    class="document-index__delete"
+                    title="Delete"
+                    [disabled]="deletingIds().has(document.id)"
+                    (click)="deleteDocument(document.id)"
+                  >
+                    <ng-icon name="lucideTrash2" size="15" />
+                  </button>
+                </span>
               </li>
             }
           </ul>
+          @if (deleteError()) {
+            <p class="cv-workspace__delete-error">{{ deleteError() }}</p>
+          }
         }
       </div>
     </section>
@@ -242,6 +256,41 @@ const PIPELINE_STEPS: PipelineStep[] = [
       .document-index__meta {
         font-size: var(--text-xs);
       }
+      .document-index__row-end {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        flex-shrink: 0;
+      }
+      .document-index__delete {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: none;
+        color: var(--ink-tertiary);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+      }
+      .document-index__delete:hover:not(:disabled) {
+        background: var(--negative-tint);
+        color: var(--negative);
+      }
+      .document-index__delete:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .cv-workspace__delete-error {
+        margin: var(--space-2) 0 0;
+        padding: var(--space-2) var(--space-3);
+        background: var(--negative-tint);
+        color: var(--negative);
+        border-radius: var(--radius-sm);
+        font-size: var(--text-sm);
+      }
 
       @keyframes document-row-in {
         from {
@@ -281,6 +330,8 @@ export class CvListComponent implements OnInit {
   protected readonly pipelineSteps = PIPELINE_STEPS;
   protected readonly documents = signal<DocumentSummary[]>([]);
   protected readonly uploading = signal(false);
+  protected readonly deletingIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly deleteError = signal<string | null>(null);
 
   constructor(
     private readonly cvApi: CvApiService,
@@ -301,6 +352,35 @@ export class CvListComponent implements OnInit {
       error: () => {
         this.uploading.set(false);
       },
+    });
+  }
+
+  deleteDocument(documentId: string): void {
+    if (this.deletingIds().has(documentId)) return;
+    const confirmed = window.confirm(
+      'Delete this CV? This also removes any analysis, recommendations, and tailored versions built from it.',
+    );
+    if (!confirmed) return;
+
+    this.deleteError.set(null);
+    this.deletingIds.update((ids) => new Set(ids).add(documentId));
+    this.cvApi.delete(documentId).subscribe({
+      next: () => {
+        this.documents.update((docs) => docs.filter((document) => document.id !== documentId));
+        this.clearDeleting(documentId);
+      },
+      error: () => {
+        this.deleteError.set('Could not delete this CV. Please try again.');
+        this.clearDeleting(documentId);
+      },
+    });
+  }
+
+  private clearDeleting(documentId: string): void {
+    this.deletingIds.update((ids) => {
+      const next = new Set(ids);
+      next.delete(documentId);
+      return next;
     });
   }
 

@@ -9,11 +9,20 @@ import time
 from domain.cv.policies import detect_sections
 from domain.documents.enums import ProcessingStatus
 from domain.documents.exceptions import DocumentParsingError, DocumentValidationError
+from domain.documents.language import detect_language
 from domain.semantics.enums import SemanticEntityType
 
 logger = logging.getLogger(__name__)
 
 EXTRACTION_VERSION = "1.0.0"
+
+# The placeholder original_filename set for a job offer submitted as
+# pasted text rather than an uploaded file (see
+# interfaces/api/v1/jobs/views.py::JobListCreateView._extract_upload) -
+# checked by exact match before renaming below, so a real uploaded file
+# a candidate happens to have named literally "job-offer.txt" is never
+# silently overwritten.
+PASTED_TEXT_PLACEHOLDER_FILENAME = "job-offer.txt"
 
 
 class ProcessJobDocumentPipeline:
@@ -46,7 +55,8 @@ class ProcessJobDocumentPipeline:
             self._repository.update_status(document_id, ProcessingStatus.PROCESSING)
 
             parsed = self._parse_document.execute(document_id, document.mime_type, document.original_filename)
-            sections = detect_sections(parsed)
+            language = detect_language(parsed.raw_text)
+            sections = detect_sections(parsed, language.language)
             self._repository.save_parsed_result(
                 document_id,
                 raw_text=parsed.raw_text,
@@ -55,6 +65,7 @@ class ProcessJobDocumentPipeline:
             )
 
             profile = self._extract_job_profile.execute(document_id, parsed, sections)
+            self._rename_pasted_text_document(document_id, document.original_filename, profile.title)
             self._enrich(document_id, profile)
 
             self._repository.update_processing_metadata(document_id, extraction_version=EXTRACTION_VERSION)
@@ -73,6 +84,20 @@ class ProcessJobDocumentPipeline:
             )
             logger.exception("job.process.unexpected_error document_id=%s", document_id)
             raise
+
+    def _rename_pasted_text_document(
+        self, document_id: str, current_filename: str, title: str | None
+    ) -> None:
+        """A pasted-text job offer starts life named "job-offer.txt" (no
+        real filename exists to use) - once extraction knows the actual
+        job title, that is a far more useful label in the job list than
+        a generic placeholder repeated across every pasted submission.
+        Never touches a real uploaded file's own filename (the exact-
+        match check above only ever matches the placeholder itself).
+        """
+        if not title or current_filename != PASTED_TEXT_PLACEHOLDER_FILENAME:
+            return
+        self._repository.update_original_filename(document_id, title[:255])
 
     def _enrich(self, document_id: str, profile) -> None:
         try:
@@ -99,4 +124,6 @@ def _section_to_dict(section) -> dict:
         "type": section.section_type.value,
         "heading": section.heading_text,
         "page_number": section.page_number,
+        "language": section.language.value if section.language else None,
+        "confidence": section.confidence,
     }

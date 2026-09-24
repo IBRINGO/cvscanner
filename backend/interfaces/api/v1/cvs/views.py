@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 from apps.candidates.models import CandidateProfile
 from apps.documents.models import Document
-from config.container import build_upload_document
+from config.container import build_delete_document, build_upload_document
 from domain.documents.enums import DocumentType, ProcessingStatus
 from domain.documents.exceptions import DocumentValidationError
 from interfaces.api.v1.cvs.pdf_rendering import render_cv_pdf
@@ -57,6 +57,11 @@ class CvDetailView(APIView):
     def get(self, request, document_id):
         document = get_object_or_404(Document, id=document_id, document_type=DocumentType.CV.value)
         return Response(DocumentSerializer(document).data)
+
+    def delete(self, request, document_id):
+        get_object_or_404(Document, id=document_id, document_type=DocumentType.CV.value)
+        build_delete_document().execute(str(document_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CvStatusView(APIView):

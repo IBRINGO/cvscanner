@@ -73,6 +73,44 @@ class TestRuleBasedJobExtractor:
 
 
 class TestRuleBasedJobExtractorEdgeCases:
+    def test_finds_a_skill_mentioned_inside_a_full_sentence_requirement(self, skill_alias_index):
+        # Regression: a real job posting phrased every requirement as a
+        # sentence ("Good knowledge of Java and Spring Boot.", "Basic
+        # understanding of REST APIs and backend-development
+        # principles.") rather than a bare skill name. _classify_requirement
+        # used to call normalize_skill_name on the WHOLE line, which only
+        # matches an exact alias/canonical name - a sentence never is one,
+        # so every such requirement fell through to RequirementType.OTHER
+        # with skill=None. RequirementType.OTHER is never evaluated by the
+        # scoring engine (application/matching/scoring.py), so these
+        # requirements silently vanished from every analysis instead of
+        # counting as a match or a gap.
+        from domain.documents.entities import ParsedDocument
+
+        text = (
+            "Backend Engineer\n\n"
+            "REQUIREMENTS\n"
+            "Good knowledge of Java and Spring Boot.\n"
+            "Basic understanding of REST APIs and backend-development principles.\n"
+        )
+        parsed = ParsedDocument(raw_text=text, pages=[])
+        sections = detect_sections(parsed)
+
+        profile, _ = RuleBasedJobExtractor(skill_alias_index).extract(
+            document_id="job-3", parsed=parsed, sections=sections
+        )
+
+        skill_requirements = {r.raw_text: r.skill for r in profile.requirements if r.skill is not None}
+        assert skill_requirements["Good knowledge of Java and Spring Boot."].canonical_name == "Java"
+        assert (
+            skill_requirements[
+                "Basic understanding of REST APIs and backend-development principles."
+            ].canonical_name
+            == "REST"
+        )
+        for requirement in profile.requirements:
+            assert requirement.requirement_type == RequirementType.REQUIRED_SKILL
+
     def test_job_with_no_explicit_skills_produces_no_skill_requirements(self, skill_alias_index):
         from domain.documents.entities import ParsedDocument
 
