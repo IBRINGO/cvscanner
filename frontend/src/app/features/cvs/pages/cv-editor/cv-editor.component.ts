@@ -83,30 +83,49 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
               </div>
             </dl>
             <div class="editor__export-actions">
-              <button
-                type="button"
-                class="editor__export-preview"
-                [disabled]="previewing() || downloading()"
-                (click)="previewPdf()"
-              >
-                <ng-icon name="lucideEye" size="15" />
-                {{ previewing() ? 'Preparing preview...' : 'Preview' }}
-              </button>
-              <button type="button" class="editor__export-download" [disabled]="downloading() || previewing()" (click)="downloadPdf()">
-                <ng-icon name="lucideFileUp" size="15" />
-                {{ downloading() ? 'Preparing your PDF...' : 'Download PDF' }}
-              </button>
+              <div class="editor__export-row">
+                <button type="button" class="editor__export-preview" (click)="openPreview()">
+                  <ng-icon name="lucideEye" size="16" />
+                  Preview
+                </button>
+                <button type="button" class="editor__export-download" [disabled]="downloading()" (click)="downloadPdf()">
+                  <ng-icon name="lucideDownload" size="16" />
+                  {{ downloading() ? 'Preparing...' : 'Download PDF' }}
+                </button>
+              </div>
               <button type="button" class="editor__export-cancel" (click)="closeExport()">Continue editing</button>
             </div>
             @if (downloadError()) {
               <p class="editor__export-error">{{ downloadError() }}</p>
             }
-            @if (previewError()) {
-              <p class="editor__export-error">{{ previewError() }}</p>
-            }
             <p class="text-tertiary editor__export-note">
               Rendered server-side at A4 size so the download matches your template exactly.
             </p>
+          </div>
+        </div>
+      }
+
+      @if (showPreview() && profile()) {
+        <div class="editor__preview-modal-overlay" role="dialog" aria-label="CV preview">
+          <div class="editor__preview-modal">
+            <div class="editor__preview-modal-topbar">
+              <span class="editor__preview-modal-title">
+                <ng-icon name="lucideEye" size="15" />
+                Preview - {{ currentTemplate().name }}
+              </span>
+              <button type="button" class="editor__preview-modal-close" title="Close preview" (click)="closePreview()">
+                <ng-icon name="lucideX" size="16" />
+              </button>
+            </div>
+            <div class="editor__preview-modal-body">
+              <app-cv-document-renderer
+                [profile]="profile()!"
+                [sectionOrder]="sectionOrder()"
+                [hiddenSectionIds]="hiddenSectionIds()"
+                [template]="currentTemplate()"
+                [groupSkillsByCategory]="groupSkillsByCategory()"
+              />
+            </div>
           </div>
         </div>
       }
@@ -116,7 +135,7 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
       } @else if (!profile()) {
         <p class="text-secondary editor__loading">This CV has no extracted profile yet.</p>
       } @else {
-        @if (fromTailoringId()) {
+        @if (fromTailoringId() && showTailoredBanner()) {
           <div class="editor__tailored-banner">
             <ng-icon name="lucideCircleCheck" size="15" />
             Editing your tailored CV - accepted, factually-verified changes are already applied.
@@ -155,29 +174,23 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
           <aside class="editor__panel editor__sections">
             <button
               type="button"
-              class="editor__personal-info-btn"
+              class="editor__rail-btn"
+              title="Personal info"
               [attr.data-selected]="selectedSectionId() === personalInfoId"
               (click)="selectedSectionId.set(personalInfoId)"
             >
-              <ng-icon name="lucideUserRound" size="15" />
-              Personal info
+              <ng-icon name="lucideUserRound" size="18" />
             </button>
 
             <div class="editor__sections-menu">
               <button
                 type="button"
-                class="editor__sections-toggle"
+                class="editor__rail-btn"
+                title="Sections"
                 [attr.aria-expanded]="sectionsMenuOpen()"
                 (click)="toggleSectionsMenu()"
               >
-                <ng-icon name="lucideLayers" size="15" />
-                Sections
-                <ng-icon
-                  name="lucideChevronDown"
-                  size="14"
-                  class="editor__sections-chevron"
-                  [attr.data-open]="sectionsMenuOpen()"
-                />
+                <ng-icon name="lucideLayers" size="18" />
               </button>
 
               @if (sectionsMenuOpen()) {
@@ -219,8 +232,12 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
             </div>
 
             <div class="editor__history">
-              <button type="button" [disabled]="!canUndo()" (click)="undo()">Undo</button>
-              <button type="button" [disabled]="!canRedo()" (click)="redo()">Redo</button>
+              <button type="button" class="editor__rail-btn" title="Undo" [disabled]="!canUndo()" (click)="undo()">
+                <ng-icon name="lucideUndo2" size="18" />
+              </button>
+              <button type="button" class="editor__rail-btn" title="Redo" [disabled]="!canRedo()" (click)="redo()">
+                <ng-icon name="lucideRedo2" size="18" />
+              </button>
             </div>
           </aside>
 
@@ -551,12 +568,15 @@ export class CvEditorComponent implements OnInit {
   readonly canRedo = computed(() => this.future().length > 0);
 
   readonly showExport = signal(false);
+  readonly showPreview = signal(false);
   readonly estimatedPages = signal(1);
   readonly fromTailoringId = signal<string | null>(null);
+  /** The tailored-CV banner is informational, not an ongoing status - it
+   * self-dismisses a few seconds after load (see loadTailoredProfile())
+   * instead of permanently occupying space at the top of the editor. */
+  readonly showTailoredBanner = signal(true);
   readonly downloading = signal(false);
   readonly downloadError = signal<string | null>(null);
-  readonly previewing = signal(false);
-  readonly previewError = signal<string | null>(null);
 
   protected readonly currentTemplate = computed<TemplateDefinition>(() => findTemplate(this.templateId()));
   protected readonly selectedRef = computed<CvSectionRef | undefined>(() =>
@@ -614,6 +634,7 @@ export class CvEditorComponent implements OnInit {
         this.profile.set(applyTailoringChanges(original, plan.changes));
         this.fromTailoringId.set(tailoringId);
         this.loading.set(false);
+        setTimeout(() => this.showTailoredBanner.set(false), 6000);
       },
       error: () => {
         // The tailoring plan could not be loaded - fall back to the real
@@ -951,25 +972,21 @@ export class CvEditorComponent implements OnInit {
     this.showExport.set(false);
   }
 
-  previewPdf(): void {
-    const profile = this.profile();
-    if (!profile || this.previewing()) return;
+  /** Preview is a purely client-side visual of the current document -
+   * it never calls the render-pdf endpoint, opens a browser tab, or
+   * triggers any download/print flow. It is the same live-styled
+   * renderer used in the main editing pane, just shown full-size in a
+   * modal so the candidate can review it before committing to a
+   * download. */
+  openPreview(): void {
+    if (!this.profile()) return;
+    this.showExport.set(false);
+    this.showPreview.set(true);
+  }
 
-    this.previewing.set(true);
-    this.previewError.set(null);
-    this.cvApi.renderPdf(this.renderPdfRequest(profile)).subscribe({
-      next: (blob) => {
-        this.previewing.set(false);
-        // Left open deliberately: the new tab holds the only reference
-        // to this blob URL, and it needs to stay valid for as long as
-        // that tab is open to view/print/save the PDF from.
-        window.open(URL.createObjectURL(blob), '_blank');
-      },
-      error: () => {
-        this.previewing.set(false);
-        this.previewError.set('Could not generate the preview. Please try again.');
-      },
-    });
+  closePreview(): void {
+    this.showPreview.set(false);
+    this.showExport.set(true);
   }
 
   downloadPdf(): void {

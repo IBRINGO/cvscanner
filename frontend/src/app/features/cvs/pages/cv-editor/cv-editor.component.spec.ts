@@ -203,6 +203,22 @@ describe('CvEditorComponent', () => {
     expect(component.showExport()).toBeFalse();
   });
 
+  it('opens a client-side preview without calling the backend or opening a browser tab', () => {
+    setup();
+    const openSpy = spyOn(window, 'open');
+    component.openExport();
+    component.openPreview();
+
+    expect(component.showPreview()).toBeTrue();
+    expect(component.showExport()).toBeFalse();
+    expect(cvApiSpy.renderPdf).not.toHaveBeenCalled();
+    expect(openSpy).not.toHaveBeenCalled();
+
+    component.closePreview();
+    expect(component.showPreview()).toBeFalse();
+    expect(component.showExport()).toBeTrue();
+  });
+
   it('adds a custom section and can remove it again', () => {
     setup();
     const before = component.sectionOrder().length;
@@ -449,6 +465,43 @@ describe('CvEditorComponent', () => {
     expect(tailoringApiSpy.getPlan).toHaveBeenCalledWith('plan-1');
     expect(component.profile()?.experiences[0].description).toBe('Built the platform using REST APIs.');
     expect(component.fromTailoringId()).toBe('plan-1');
+  });
+
+  it('auto-dismisses the tailored-CV banner a few seconds after load', () => {
+    jasmine.clock().install();
+    try {
+      const plan = tailoringPlan();
+      tailoringApiSpy = jasmine.createSpyObj('TailoringApiService', { getPlan: of(plan) });
+      cvApiSpy = jasmine.createSpyObj('CvApiService', {
+        getProfile: of({ document_id: 'cv-1', status: 'PROCESSED', profile: profile() }),
+      });
+      TestBed.configureTestingModule({
+        imports: [CvEditorComponent],
+        providers: [
+          provideRouter([]),
+          { provide: CvApiService, useValue: cvApiSpy },
+          { provide: TailoringApiService, useValue: tailoringApiSpy },
+          {
+            provide: ActivatedRoute,
+            useValue: {
+              snapshot: {
+                paramMap: convertToParamMap({ id: 'cv-1' }),
+                queryParamMap: convertToParamMap({ tailoringId: 'plan-1' }),
+              },
+            },
+          },
+        ],
+      });
+      fixture = TestBed.createComponent(CvEditorComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+
+      expect(component.showTailoredBanner()).toBeTrue();
+      jasmine.clock().tick(6001);
+      expect(component.showTailoredBanner()).toBeFalse();
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
 
   it('falls back to the real original profile if the tailoring plan fails to load', () => {

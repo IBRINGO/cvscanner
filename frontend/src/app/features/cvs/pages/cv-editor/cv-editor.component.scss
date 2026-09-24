@@ -208,6 +208,15 @@
   gap: var(--space-2);
 }
 
+.editor__export-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.editor__export-row > button {
+  flex: 1;
+}
+
 .editor__export-download {
   display: inline-flex;
   align-items: center;
@@ -242,13 +251,8 @@
   cursor: pointer;
 }
 
-.editor__export-preview:hover:not(:disabled) {
+.editor__export-preview:hover {
   background: var(--surface-sunken);
-}
-
-.editor__export-preview:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 .editor__export-cancel {
@@ -280,35 +284,44 @@
   cursor: default;
 }
 
-.editor__personal-info-btn {
+// A compact icon rail rather than a labelled button - see .editor__sections
+// below, which is what keeps this dock narrow at rest.
+.editor__rail-btn {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: var(--surface-raised);
-  color: var(--ink-primary);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
+  color: var(--ink-secondary);
   cursor: pointer;
-  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+  transition: background var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease);
 }
 
-.editor__personal-info-btn:hover {
+.editor__rail-btn:hover:not(:disabled) {
   background: var(--surface-sunken);
+  color: var(--ink-primary);
 }
 
-.editor__personal-info-btn[data-selected='true'] {
+.editor__rail-btn[data-selected='true'],
+.editor__rail-btn[aria-expanded='true'] {
   border-color: var(--accent);
   background: var(--accent-tint);
   color: var(--accent-strong);
 }
 
+.editor__rail-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .editor {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 280px;
+  grid-template-columns: 64px minmax(0, 1fr) 280px;
   gap: var(--space-5);
   align-items: start;
 }
@@ -327,14 +340,20 @@
   overflow-y: auto;
 }
 
-// The sections list now lives in a dropdown (absolutely positioned,
-// see .editor__sections-dropdown) instead of the panel's normal flow -
-// an overflow:auto ancestor would clip it regardless of z-index, and
-// this panel's own content is short enough now that it never needs to
-// scroll itself.
+// A narrow icon dock, not a labelled sidebar: it only reserves 64px of
+// grid width at rest, and the sections list opens as a flyout panel
+// (see .editor__sections-dropdown) that overlays the document instead
+// of pushing it aside. The sections list also used to live in the
+// panel's normal flow, where an overflow:auto ancestor would clip an
+// absolutely-positioned flyout regardless of z-index - this panel's
+// own content is short enough now that it never needs to scroll itself.
 .editor__sections {
+  width: 64px;
   overflow: visible;
   max-height: none;
+  align-items: center;
+  padding: var(--space-3) var(--space-2);
+  gap: var(--space-4);
 }
 
 .editor__properties h2 {
@@ -355,8 +374,16 @@
 
 .editor__field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  // minmax(0, 1fr), not a bare 1fr: a grid track's implicit min size is
+  // the content's min-content width, which for a date input can exceed
+  // half the panel - minmax(0, ...) lets the track (and the input
+  // inside it) actually shrink instead of overflowing the panel.
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-3);
+}
+
+.editor__field-row .editor__field {
+  min-width: 0;
 }
 
 .editor__toggle-row {
@@ -385,6 +412,8 @@
 .editor__field input,
 .editor__field textarea,
 .editor__select {
+  width: 100%;
+  min-width: 0;
   font: inherit;
   font-size: var(--text-sm);
   padding: var(--space-2) var(--space-3);
@@ -417,42 +446,6 @@
   position: relative;
 }
 
-.editor__sections-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-  color: var(--ink-primary);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background var(--motion-fast) var(--motion-ease);
-}
-
-.editor__sections-toggle:hover {
-  background: var(--surface-sunken);
-}
-
-.editor__sections-toggle[aria-expanded='true'] {
-  border-color: var(--accent);
-  background: var(--accent-tint);
-  color: var(--accent-strong);
-}
-
-.editor__sections-chevron {
-  margin-left: auto;
-  transition: transform var(--motion-base) var(--motion-ease);
-}
-
-.editor__sections-chevron[data-open='true'] {
-  transform: rotate(180deg);
-}
-
 .editor__section-menu-backdrop {
   position: fixed;
   inset: 0;
@@ -460,24 +453,20 @@
   background: transparent;
 }
 
+// Flies out to the right of the narrow icon dock rather than dropping
+// down from it - the dock is only 64px wide, too narrow to hold the
+// section list itself.
 .editor__sections-dropdown {
   position: absolute;
-  top: calc(100% + var(--space-2));
-  left: 0;
-  right: 0;
+  top: 0;
+  left: calc(100% + var(--space-2));
+  width: 240px;
   z-index: 20;
   padding: var(--space-3);
   background: var(--surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-overlay);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .editor__sections-toggle,
-  .editor__sections-chevron {
-    transition: none;
-  }
 }
 
 .editor__section-list {
@@ -596,27 +585,12 @@
 
 .editor__history {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: var(--space-2);
+  width: 100%;
   border-top: 1px solid var(--border-subtle);
   padding-top: var(--space-4);
-}
-
-.editor__history button {
-  flex: 1;
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  padding: var(--space-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-  color: var(--ink-primary);
-  cursor: pointer;
-}
-
-.editor__history button:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 .editor__entry-card {
@@ -828,6 +802,34 @@
   }
   .editor__sections {
     order: 1;
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+  }
+  .editor__history {
+    flex-direction: row;
+    width: auto;
+    border-top: none;
+    padding-top: 0;
+  }
+  // The flyout is anchored to a 64px-wide dock on desktop; once the
+  // dock spans the full row on smaller screens there is no "right of
+  // it" to fly out into, so it drops down and stretches the full width
+  // of the bar instead, same as before the icon-dock treatment. That
+  // needs the containing block to be .editor__sections itself, not the
+  // (now content-sized) .editor__sections-menu button wrapper - so the
+  // positioning context moves up a level here.
+  .editor__sections-menu {
+    position: static;
+  }
+  .editor__sections {
+    position: relative;
+  }
+  .editor__sections-dropdown {
+    top: calc(100% + var(--space-2));
+    left: 0;
+    right: 0;
+    width: auto;
   }
   .editor__preview {
     order: 2;
@@ -850,4 +852,108 @@
   .editor__gallery-link {
     flex-shrink: 0;
   }
+}
+
+// Client-side only: the preview modal reuses the same live document
+// renderer as the main editing pane (see openPreview() in the
+// component) - it never calls the render-pdf endpoint, opens a tab, or
+// triggers a download/print. It exists purely so the candidate can see
+// the full, final-styled document before choosing to download it.
+.editor__preview-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 21, 26, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: var(--space-5);
+}
+
+.editor__preview-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: min(920px, 100%);
+  max-height: 100%;
+  background: var(--surface-raised);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-overlay);
+  overflow: hidden;
+}
+
+.editor__preview-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.editor__preview-modal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.editor__preview-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--ink-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.editor__preview-modal-close:hover {
+  background: var(--surface-sunken);
+  color: var(--ink-primary);
+}
+
+.editor__preview-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-6);
+  display: flex;
+  justify-content: center;
+  background: var(--surface-sunken);
+}
+
+// Thinner overflow scrollbars across the editor's scrollable panes
+// (Firefox via scrollbar-width, Chrome/Safari/Edge via the
+// -webkit-scrollbar pseudo-elements) instead of each browser's bulky
+// default bar.
+.editor__panel,
+.editor-template-bar__scroll,
+.editor__preview-modal-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.editor__panel::-webkit-scrollbar,
+.editor-template-bar__scroll::-webkit-scrollbar,
+.editor__preview-modal-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.editor__panel::-webkit-scrollbar-track,
+.editor-template-bar__scroll::-webkit-scrollbar-track,
+.editor__preview-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor__panel::-webkit-scrollbar-thumb,
+.editor-template-bar__scroll::-webkit-scrollbar-thumb,
+.editor__preview-modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
 }
