@@ -19,7 +19,7 @@ import {
 } from '../../models/cv-document.model';
 import { EditorSnapshot } from '../../models/editor-state.model';
 import { applyTailoringChanges } from '../../utils/apply-tailoring-changes';
-import { CvApiService } from '../../services/cv-api.service';
+import { CvApiService, RenderPdfRequest } from '../../services/cv-api.service';
 import { TailoringApiService } from '../../../tailoring/services/tailoring-api.service';
 
 /** Reference width the renderer is measured at before being scaled into
@@ -83,7 +83,16 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
               </div>
             </dl>
             <div class="editor__export-actions">
-              <button type="button" class="editor__export-download" [disabled]="downloading()" (click)="downloadPdf()">
+              <button
+                type="button"
+                class="editor__export-preview"
+                [disabled]="previewing() || downloading()"
+                (click)="previewPdf()"
+              >
+                <ng-icon name="lucideEye" size="15" />
+                {{ previewing() ? 'Preparing preview...' : 'Preview' }}
+              </button>
+              <button type="button" class="editor__export-download" [disabled]="downloading() || previewing()" (click)="downloadPdf()">
                 <ng-icon name="lucideFileUp" size="15" />
                 {{ downloading() ? 'Preparing your PDF...' : 'Download PDF' }}
               </button>
@@ -91,6 +100,9 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
             </div>
             @if (downloadError()) {
               <p class="editor__export-error">{{ downloadError() }}</p>
+            }
+            @if (previewError()) {
+              <p class="editor__export-error">{{ previewError() }}</p>
             }
             <p class="text-tertiary editor__export-note">
               Rendered server-side at A4 size so the download matches your template exactly.
@@ -124,7 +136,12 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
               >
                 <span class="editor-template-chip__thumb">
                   <span class="editor-template-chip__canvas">
-                    <app-cv-document-renderer [profile]="profile()!" [sectionOrder]="sectionOrder()" [template]="t" />
+                    <app-cv-document-renderer
+                      [profile]="profile()!"
+                      [sectionOrder]="sectionOrder()"
+                      [template]="t"
+                      [groupSkillsByCategory]="groupSkillsByCategory()"
+                    />
                   </span>
                 </span>
                 <span class="editor-template-chip__name">{{ t.name }}</span>
@@ -146,39 +163,59 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
               Personal info
             </button>
 
-            <div class="editor__field">
-              <span class="editor__label">Sections</span>
-              <p class="editor__hint text-tertiary">Drag to reorder</p>
-              <ul class="editor__section-list" cdkDropList (cdkDropListDropped)="onSectionDrop($event)">
-                @for (ref of sectionOrder(); track ref.id; let i = $index) {
-                  <li
-                    class="editor__section-row"
-                    cdkDrag
-                    [attr.data-selected]="selectedSectionId() === ref.id"
-                    [attr.data-hidden]="hiddenSectionIds().includes(ref.id)"
-                  >
-                    <span class="editor__drag-handle" cdkDragHandle>
-                      <ng-icon name="lucideGripVertical" size="14" />
-                    </span>
-                    <button type="button" class="editor__section-name" (click)="selectedSectionId.set(ref.id)">
-                      {{ labelFor(ref) }}
-                    </button>
-                    <div class="editor__section-actions">
-                      <button
-                        type="button"
-                        [title]="hiddenSectionIds().includes(ref.id) ? 'Show section' : 'Hide section'"
-                        (click)="toggleHidden(ref.id)"
-                      >
-                        <ng-icon [name]="hiddenSectionIds().includes(ref.id) ? 'lucideCircleX' : 'lucideCircleCheck'" size="13" />
-                      </button>
-                    </div>
-                  </li>
-                }
-              </ul>
-              <button type="button" class="editor__add-section" (click)="addCustomSection()">
-                <ng-icon name="lucideFolder" size="14" />
-                Add custom section
+            <div class="editor__sections-menu">
+              <button
+                type="button"
+                class="editor__sections-toggle"
+                [attr.aria-expanded]="sectionsMenuOpen()"
+                (click)="toggleSectionsMenu()"
+              >
+                <ng-icon name="lucideLayers" size="15" />
+                Sections
+                <ng-icon
+                  name="lucideChevronDown"
+                  size="14"
+                  class="editor__sections-chevron"
+                  [attr.data-open]="sectionsMenuOpen()"
+                />
               </button>
+
+              @if (sectionsMenuOpen()) {
+                <div class="editor__section-menu-backdrop" (click)="closeSectionsMenu()"></div>
+                <div class="editor__sections-dropdown">
+                  <p class="editor__hint text-tertiary">Drag to reorder</p>
+                  <ul class="editor__section-list" cdkDropList (cdkDropListDropped)="onSectionDrop($event)">
+                    @for (ref of sectionOrder(); track ref.id; let i = $index) {
+                      <li
+                        class="editor__section-row"
+                        cdkDrag
+                        [attr.data-selected]="selectedSectionId() === ref.id"
+                        [attr.data-hidden]="hiddenSectionIds().includes(ref.id)"
+                      >
+                        <span class="editor__drag-handle" cdkDragHandle>
+                          <ng-icon name="lucideGripVertical" size="14" />
+                        </span>
+                        <button type="button" class="editor__section-name" (click)="selectSectionAndClose(ref.id)">
+                          {{ labelFor(ref) }}
+                        </button>
+                        <div class="editor__section-actions">
+                          <button
+                            type="button"
+                            [title]="hiddenSectionIds().includes(ref.id) ? 'Show section' : 'Hide section'"
+                            (click)="toggleHiddenAndClose(ref.id)"
+                          >
+                            <ng-icon [name]="hiddenSectionIds().includes(ref.id) ? 'lucideCircleX' : 'lucideCircleCheck'" size="13" />
+                          </button>
+                        </div>
+                      </li>
+                    }
+                  </ul>
+                  <button type="button" class="editor__add-section" (click)="addCustomSection()">
+                    <ng-icon name="lucideFolder" size="14" />
+                    Add custom section
+                  </button>
+                </div>
+              }
             </div>
 
             <div class="editor__history">
@@ -195,6 +232,7 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
               [template]="currentTemplate()"
               [interactive]="true"
               [selectedSectionId]="selectedSectionId()"
+              [groupSkillsByCategory]="groupSkillsByCategory()"
               (sectionSelected)="selectedSectionId.set($event)"
             />
           </div>
@@ -277,6 +315,26 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
                           <span class="editor__label">Company</span>
                           <input type="text" [ngModel]="exp.company ?? ''" (ngModelChange)="updateExperience(i, 'company', $event)" />
                         </label>
+                        <div class="editor__field-row">
+                          <label class="editor__field">
+                            <span class="editor__label">Start date</span>
+                            <input
+                              type="text"
+                              placeholder="e.g. Jan 2020"
+                              [ngModel]="exp.start_date_raw ?? ''"
+                              (ngModelChange)="updateExperience(i, 'start_date_raw', $event)"
+                            />
+                          </label>
+                          <label class="editor__field">
+                            <span class="editor__label">End date</span>
+                            <input
+                              type="text"
+                              placeholder="e.g. Present"
+                              [ngModel]="exp.end_date_raw ?? ''"
+                              (ngModelChange)="updateExperience(i, 'end_date_raw', $event)"
+                            />
+                          </label>
+                        </div>
                         <label class="editor__field">
                           <span class="editor__label">Description</span>
                           <textarea rows="3" [ngModel]="exp.description ?? ''" (ngModelChange)="updateExperience(i, 'description', $event)"></textarea>
@@ -308,6 +366,26 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
                         <span class="editor__label">Institution</span>
                         <input type="text" [ngModel]="entry.institution ?? ''" (ngModelChange)="updateEducation(i, 'institution', $event)" />
                       </label>
+                      <div class="editor__field-row">
+                        <label class="editor__field">
+                          <span class="editor__label">Start date</span>
+                          <input
+                            type="text"
+                            placeholder="e.g. 2013"
+                            [ngModel]="entry.start_date_raw ?? ''"
+                            (ngModelChange)="updateEducation(i, 'start_date_raw', $event)"
+                          />
+                        </label>
+                        <label class="editor__field">
+                          <span class="editor__label">End date</span>
+                          <input
+                            type="text"
+                            placeholder="e.g. 2017"
+                            [ngModel]="entry.end_date_raw ?? ''"
+                            (ngModelChange)="updateEducation(i, 'end_date_raw', $event)"
+                          />
+                        </label>
+                      </div>
                     </div>
                   }
                   <button type="button" class="editor__add-entry" (click)="addEducation()">
@@ -349,10 +427,31 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
                   </button>
                 }
                 @case ('skills') {
-                  <ul class="editor__chip-list">
+                  <label class="editor__toggle-row">
+                    <input
+                      type="checkbox"
+                      [ngModel]="groupSkillsByCategory()"
+                      (ngModelChange)="groupSkillsByCategory.set($event)"
+                    />
+                    <span>Group by category</span>
+                  </label>
+                  <p class="editor__hint text-tertiary">
+                    Optional - works best on two-column templates (Modern Split, Technical).
+                  </p>
+
+                  <ul class="editor__skill-list">
                     @for (skill of profile()!.skills; track $index; let i = $index) {
-                      <li>
-                        {{ skill.skill?.canonical_name ?? skill.raw_text }}
+                      <li class="editor__skill-row">
+                        <span class="editor__skill-name">{{ skill.skill?.canonical_name ?? skill.raw_text }}</span>
+                        @if (groupSkillsByCategory()) {
+                          <input
+                            type="text"
+                            class="editor__skill-category"
+                            placeholder="Category"
+                            [ngModel]="skill.skill?.category ?? ''"
+                            (ngModelChange)="updateSkillCategory(i, $event)"
+                          />
+                        }
                         <button type="button" title="Remove from CV" (click)="removeListItem('skills', i)">
                           <ng-icon name="lucideX" size="12" />
                         </button>
@@ -437,6 +536,11 @@ export class CvEditorComponent implements OnInit {
   readonly selectedSectionId = signal<string>('summary');
   readonly templates = CV_TEMPLATES;
   readonly personalInfoId = PERSONAL_INFO_ID;
+  readonly sectionsMenuOpen = signal(false);
+  /** Optional per section 67 of this pass's brief - off by default
+   * everywhere, never assumed on just because a 2-column template is
+   * active (the candidate decides, from the Skills panel). */
+  readonly groupSkillsByCategory = signal(false);
   protected readonly THUMB_WIDTH = THUMB_WIDTH;
   protected readonly THUMB_SCALE = THUMB_SCALE;
   protected readonly THUMB_REFERENCE_WIDTH = THUMB_REFERENCE_WIDTH;
@@ -451,6 +555,8 @@ export class CvEditorComponent implements OnInit {
   readonly fromTailoringId = signal<string | null>(null);
   readonly downloading = signal(false);
   readonly downloadError = signal<string | null>(null);
+  readonly previewing = signal(false);
+  readonly previewError = signal<string | null>(null);
 
   protected readonly currentTemplate = computed<TemplateDefinition>(() => findTemplate(this.templateId()));
   protected readonly selectedRef = computed<CvSectionRef | undefined>(() =>
@@ -568,12 +674,31 @@ export class CvEditorComponent implements OnInit {
     this.hiddenSectionIds.update((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]));
   }
 
+  toggleSectionsMenu(): void {
+    this.sectionsMenuOpen.update((open) => !open);
+  }
+
+  closeSectionsMenu(): void {
+    this.sectionsMenuOpen.set(false);
+  }
+
+  selectSectionAndClose(id: string): void {
+    this.selectedSectionId.set(id);
+    this.closeSectionsMenu();
+  }
+
+  toggleHiddenAndClose(id: string): void {
+    this.toggleHidden(id);
+    this.closeSectionsMenu();
+  }
+
   addCustomSection(): void {
     this.pushHistory();
     const id = `custom-${Date.now()}`;
     const section: CustomSectionRef = { id, kind: 'custom', title: 'New section', content: '' };
     this.sectionOrder.update((order) => [...order, section]);
     this.selectedSectionId.set(id);
+    this.closeSectionsMenu();
   }
 
   removeCustomSection(): void {
@@ -615,7 +740,11 @@ export class CvEditorComponent implements OnInit {
     this.profile.update((p) => (p ? { ...p, summary: value } : p));
   }
 
-  updateExperience(index: number, field: keyof Pick<Experience, 'title' | 'company' | 'description'>, value: string): void {
+  updateExperience(
+    index: number,
+    field: keyof Pick<Experience, 'title' | 'company' | 'description' | 'start_date_raw' | 'end_date_raw'>,
+    value: string,
+  ): void {
     this.pushHistory();
     this.profile.update((p) => {
       if (!p) return p;
@@ -625,7 +754,7 @@ export class CvEditorComponent implements OnInit {
     });
   }
 
-  updateEducation(index: number, field: 'degree' | 'institution', value: string): void {
+  updateEducation(index: number, field: 'degree' | 'institution' | 'start_date_raw' | 'end_date_raw', value: string): void {
     this.pushHistory();
     this.profile.update((p) => {
       if (!p) return p;
@@ -730,6 +859,28 @@ export class CvEditorComponent implements OnInit {
     );
   }
 
+  /** Assigns (or clears) a skill's category - stored on the same
+   * `skill` ref the renderer already groups by, so a hand-typed group
+   * name like "Backend & Frameworks" needs no new model field. Never
+   * touches raw_text/evidence: this is presentation grouping, not a
+   * re-classification of the underlying extracted fact. */
+  updateSkillCategory(index: number, category: string): void {
+    this.pushHistory();
+    const trimmed = category.trim();
+    this.profile.update((p) => {
+      if (!p) return p;
+      const skills = [...p.skills];
+      const current = skills[index];
+      skills[index] = {
+        ...current,
+        skill: trimmed
+          ? { canonical_name: current.skill?.canonical_name ?? current.raw_text, category: trimmed }
+          : null,
+      };
+      return { ...p, skills };
+    });
+  }
+
   addCertification(name: string): void {
     const value = name.trim();
     if (!value) return;
@@ -800,38 +951,62 @@ export class CvEditorComponent implements OnInit {
     this.showExport.set(false);
   }
 
+  previewPdf(): void {
+    const profile = this.profile();
+    if (!profile || this.previewing()) return;
+
+    this.previewing.set(true);
+    this.previewError.set(null);
+    this.cvApi.renderPdf(this.renderPdfRequest(profile)).subscribe({
+      next: (blob) => {
+        this.previewing.set(false);
+        // Left open deliberately: the new tab holds the only reference
+        // to this blob URL, and it needs to stay valid for as long as
+        // that tab is open to view/print/save the PDF from.
+        window.open(URL.createObjectURL(blob), '_blank');
+      },
+      error: () => {
+        this.previewing.set(false);
+        this.previewError.set('Could not generate the preview. Please try again.');
+      },
+    });
+  }
+
   downloadPdf(): void {
     const profile = this.profile();
     if (!profile || this.downloading()) return;
 
     this.downloading.set(true);
     this.downloadError.set(null);
-    this.cvApi
-      .renderPdf({
-        profile,
-        template_id: this.templateId(),
-        section_order: this.sectionOrder(),
-        hidden_section_ids: this.hiddenSectionIds(),
-      })
-      .subscribe({
-        next: (blob) => {
-          this.downloading.set(false);
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          const name = (profile.full_name ?? 'cv').trim().replace(/\s+/g, '-').toLowerCase();
-          link.download = `${name || 'cv'}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(url);
-          this.showExport.set(false);
-        },
-        error: () => {
-          this.downloading.set(false);
-          this.downloadError.set('Could not generate the PDF. Please try again.');
-        },
-      });
+    this.cvApi.renderPdf(this.renderPdfRequest(profile)).subscribe({
+      next: (blob) => {
+        this.downloading.set(false);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const name = (profile.full_name ?? 'cv').trim().replace(/\s+/g, '-').toLowerCase();
+        link.download = `${name || 'cv'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        this.showExport.set(false);
+      },
+      error: () => {
+        this.downloading.set(false);
+        this.downloadError.set('Could not generate the PDF. Please try again.');
+      },
+    });
+  }
+
+  private renderPdfRequest(profile: CandidateProfile): RenderPdfRequest {
+    return {
+      profile,
+      template_id: this.templateId(),
+      section_order: this.sectionOrder(),
+      hidden_section_ids: this.hiddenSectionIds(),
+      group_skills_by_category: this.groupSkillsByCategory(),
+    };
   }
 
   private pushHistory(): void {

@@ -10,6 +10,7 @@ export interface RenderPdfRequest {
   template_id: string;
   section_order: CvSectionRef[];
   hidden_section_ids: string[];
+  group_skills_by_category: boolean;
 }
 
 /**

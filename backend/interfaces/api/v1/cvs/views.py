@@ -92,8 +92,9 @@ class CvRenderPdfView(APIView):
         template_id = request.data.get("template_id") or "ats-classic"
         section_order = request.data.get("section_order") or []
         hidden_section_ids = request.data.get("hidden_section_ids") or []
+        group_skills_by_category = bool(request.data.get("group_skills_by_category"))
 
-        pdf_bytes = render_cv_pdf(profile, template_id, section_order, hidden_section_ids)
+        pdf_bytes = render_cv_pdf(profile, template_id, section_order, hidden_section_ids, group_skills_by_category)
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         filename = (profile.get("full_name") or "cv").strip().replace(" ", "-").lower() or "cv"

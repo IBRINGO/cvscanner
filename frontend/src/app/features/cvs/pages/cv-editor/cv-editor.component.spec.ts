@@ -245,6 +245,49 @@ describe('CvEditorComponent', () => {
     expect(component.profile()?.education.length).toBe(1);
   });
 
+  it('opens and closes the sections dropdown, and auto-closes on select or hide', () => {
+    setup();
+    expect(component.sectionsMenuOpen()).toBeFalse();
+
+    component.toggleSectionsMenu();
+    expect(component.sectionsMenuOpen()).toBeTrue();
+
+    component.selectSectionAndClose('experience');
+    expect(component.selectedSectionId()).toBe('experience');
+    expect(component.sectionsMenuOpen()).toBeFalse();
+
+    component.toggleSectionsMenu();
+    component.toggleHiddenAndClose('skills');
+    expect(component.hiddenSectionIds()).toContain('skills');
+    expect(component.sectionsMenuOpen()).toBeFalse();
+  });
+
+  it('adds an experience/education entry with editable start and end dates', () => {
+    setup();
+    component.updateExperience(0, 'start_date_raw', '2018');
+    component.updateExperience(0, 'end_date_raw', '2021');
+    expect(component.profile()?.experiences[0].start_date_raw).toBe('2018');
+    expect(component.profile()?.experiences[0].end_date_raw).toBe('2021');
+
+    component.addEducation();
+    component.updateEducation(0, 'start_date_raw', '2013');
+    component.updateEducation(0, 'end_date_raw', '2017');
+    expect(component.profile()?.education[0].start_date_raw).toBe('2013');
+    expect(component.profile()?.education[0].end_date_raw).toBe('2017');
+  });
+
+  it('assigns a custom category to a skill, and clears it back to uncategorized', () => {
+    setup();
+    component.updateSkillCategory(0, 'Backend & Frameworks');
+    expect(component.profile()?.skills[0].skill).toEqual({
+      canonical_name: 'Python',
+      category: 'Backend & Frameworks',
+    });
+
+    component.updateSkillCategory(0, '   ');
+    expect(component.profile()?.skills[0].skill).toBeNull();
+  });
+
   it('reorders experience entries by relevance without losing or duplicating any of them', () => {
     setup({
       cvProfile: profile({

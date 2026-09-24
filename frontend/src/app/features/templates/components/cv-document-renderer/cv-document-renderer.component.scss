@@ -146,6 +146,38 @@
   font-size: 0.9rem;
 }
 
+.cv-skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cv-skill-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border: 1px solid var(--paper-border);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--paper-ink-secondary);
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.cv-skill-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cv-skill-group__label {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--paper-ink-secondary);
+}
+
 // ---- ATS Classic: plain, sharp, zero decoration ----
 .cv-page[data-template='ats-classic'] {
   font-family: 'Georgia', 'Times New Roman', serif;
@@ -256,6 +288,12 @@
   .cv-page__skill-line {
     font-family: var(--font-mono);
     font-size: 0.82rem;
+  }
+  .cv-skill-chip {
+    font-family: var(--font-mono);
+  }
+  .cv-skill-group__label {
+    font-family: var(--font-mono);
   }
 }
 

@@ -171,15 +171,32 @@ def _education_html(profile: dict) -> str:
     return f'<section class="section"><h2>Education</h2>{"".join(entries)}</section>'
 
 
-def _skills_html(profile: dict) -> str:
+def _skill_name(s: dict) -> str:
+    skill_ref = s.get("skill")
+    return _text((skill_ref or {}).get("canonical_name") if skill_ref else s.get("raw_text"))
+
+
+def _skills_html(profile: dict, group_by_category: bool = False) -> str:
     skills = profile.get("skills") or []
     if not skills:
         return ""
-    names = []
+
+    if not group_by_category:
+        chips = "".join(f'<span class="chip">{_skill_name(s)}</span>' for s in skills)
+        return f'<section class="section"><h2>Skills</h2><div class="chips">{chips}</div></section>'
+
+    groups: dict[str, list[dict]] = {}
     for s in skills:
-        skill_ref = s.get("skill")
-        names.append(_text((skill_ref or {}).get("canonical_name") if skill_ref else s.get("raw_text")))
-    return f'<section class="section"><h2>Skills</h2><p class="skill-line">{", ".join(names)}</p></section>'
+        skill_ref = s.get("skill") or {}
+        category = _text(skill_ref.get("category") or "Other")
+        groups.setdefault(category, []).append(s)
+
+    group_blocks = []
+    for category, members in groups.items():
+        chips = "".join(f'<span class="chip">{_skill_name(s)}</span>' for s in members)
+        group_blocks.append(f'<div class="skill-group"><h3>{category}</h3><div class="chips">{chips}</div></div>')
+
+    return f'<section class="section"><h2>Skills</h2><div class="skill-groups">{"".join(group_blocks)}</div></section>'
 
 
 def _projects_html(profile: dict) -> str:
@@ -230,14 +247,17 @@ _SECTION_RENDERERS = {
     "summary": _summary_html,
     "experience": _experience_html,
     "education": _education_html,
-    "skills": _skills_html,
+    # "skills" is handled separately in _render_sections (needs the
+    # group_skills_by_category flag) - not listed here.
     "projects": _projects_html,
     "certifications": _certifications_html,
     "languages": _languages_html,
 }
 
 
-def _render_sections(profile: dict, section_order: list[dict], hidden_ids: set[str]) -> tuple[str, str]:
+def _render_sections(
+    profile: dict, section_order: list[dict], hidden_ids: set[str], group_skills_by_category: bool
+) -> tuple[str, str]:
     """Returns (main_html, sidebar_html) - sidebar is only used by
     2-column templates; single-column templates get everything in main."""
     main_parts: list[str] = []
@@ -249,6 +269,8 @@ def _render_sections(profile: dict, section_order: list[dict], hidden_ids: set[s
         kind = ref.get("kind")
         if kind == "custom":
             html = _custom_html(ref)
+        elif kind == "skills":
+            html = _skills_html(profile, group_skills_by_category)
         else:
             renderer = _SECTION_RENDERERS.get(kind)
             html = renderer(profile) if renderer else ""
@@ -266,6 +288,7 @@ def render_cv_pdf(
     template_id: str,
     section_order: list[dict],
     hidden_section_ids: list[str],
+    group_skills_by_category: bool = False,
 ) -> bytes:
     # Imported lazily: WeasyPrint needs native Pango/Cairo/GDK-pixbuf
     # libraries that are installed in the backend Docker image (see
@@ -278,7 +301,7 @@ def render_cv_pdf(
 
     style = TEMPLATES.get(template_id, TEMPLATES[DEFAULT_TEMPLATE])
     hidden_ids = set(hidden_section_ids or [])
-    main_html, sidebar_html = _render_sections(profile, section_order, hidden_ids)
+    main_html, sidebar_html = _render_sections(profile, section_order, hidden_ids, group_skills_by_category)
 
     name = _text(profile.get("full_name") or "Unnamed candidate")
     contact = _contact_line(profile)
@@ -362,4 +385,23 @@ def _css(style: TemplateStyle) -> str:
       .desc {{ margin: 4px 0 0; color: #5c584f; font-size: 12.5px; line-height: 1.5; }}
       .entry ul {{ margin: 6px 0 0; padding-left: 18px; color: #5c584f; font-size: 12.5px; line-height: 1.5; }}
       .skill-line {{ color: #5c584f; font-size: 12.5px; line-height: 1.6; }}
+      .chips {{ display: flex; flex-wrap: wrap; gap: 6px; }}
+      .chip {{
+        display: inline-block;
+        padding: 2px 9px;
+        border: 1px solid #e3ded2;
+        border-radius: 4px;
+        font-size: 11px;
+        line-height: 1.6;
+        color: #5c584f;
+      }}
+      .skill-groups {{ display: flex; flex-direction: column; gap: 12px; }}
+      .skill-group h3 {{
+        margin: 0 0 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #5c584f;
+      }}
     """

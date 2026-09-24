@@ -147,11 +147,26 @@ export const PERSONAL_INFO_ID = 'personal-info';
           @if (profile.skills.length > 0) {
             <section class="cv-section">
               <h2>Skills</h2>
-              <p class="cv-page__skill-line">
-                @for (skill of profile.skills; track $index; let last = $last) {
-                  {{ skill.skill?.canonical_name ?? skill.raw_text }}@if (!last) {, }
-                }
-              </p>
+              @if (groupSkillsByCategory) {
+                <div class="cv-skill-groups">
+                  @for (group of skillGroups(); track group.category) {
+                    <div class="cv-skill-group">
+                      <h3 class="cv-skill-group__label">{{ group.category }}</h3>
+                      <div class="cv-skill-chips">
+                        @for (skill of group.skills; track $index) {
+                          <span class="cv-skill-chip">{{ skill.skill?.canonical_name ?? skill.raw_text }}</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="cv-skill-chips">
+                  @for (skill of profile.skills; track $index) {
+                    <span class="cv-skill-chip">{{ skill.skill?.canonical_name ?? skill.raw_text }}</span>
+                  }
+                </div>
+              }
             </section>
           }
         }
@@ -225,6 +240,11 @@ export class CvDocumentRendererComponent {
    * leave this false so nothing there looks clickable. */
   @Input() interactive = false;
   @Input() selectedSectionId: string | null = null;
+  /** Optional: renders Skills as named category groups instead of one
+   * flat chip cloud - recommended for 2-column templates where the
+   * sidebar has room for headings, but left off by default everywhere
+   * (never assumed) since categorization is the candidate's choice. */
+  @Input() groupSkillsByCategory = false;
   @Output() sectionSelected = new EventEmitter<string>();
 
   protected readonly SECTION_LABELS = SECTION_LABELS;
@@ -254,5 +274,16 @@ export class CvDocumentRendererComponent {
       (item): item is string => !!item,
     );
     return items.join('  |  ');
+  }
+
+  skillGroups(): { category: string; skills: CandidateProfile['skills'] }[] {
+    const groups = new Map<string, CandidateProfile['skills']>();
+    for (const mention of this.profile.skills) {
+      const category = mention.skill?.category ?? 'Other';
+      const list = groups.get(category) ?? [];
+      list.push(mention);
+      groups.set(category, list);
+    }
+    return Array.from(groups.entries()).map(([category, skills]) => ({ category, skills }));
   }
 }

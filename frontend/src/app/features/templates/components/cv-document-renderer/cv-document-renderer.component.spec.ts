@@ -44,6 +44,7 @@ describe('CvDocumentRendererComponent', () => {
     fixture.componentInstance.sectionOrder = input.sectionOrder ?? DEFAULT_SECTION_ORDER;
     fixture.componentInstance.hiddenSectionIds = input.hiddenSectionIds ?? [];
     fixture.componentInstance.template = input.template ?? findTemplate('ats-classic');
+    fixture.componentInstance.groupSkillsByCategory = input.groupSkillsByCategory ?? false;
     fixture.detectChanges();
   }
 
@@ -74,6 +75,32 @@ describe('CvDocumentRendererComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('.cv-page__sidebar')).toBeNull();
     expect(el.querySelector('.cv-page__body')?.textContent).toContain('Python');
+  });
+
+  it('renders skills as chips, never a bare comma-separated line', () => {
+    setup();
+    const el = fixture.nativeElement as HTMLElement;
+    const chip = el.querySelector('.cv-skill-chip');
+    expect(chip?.textContent?.trim()).toBe('Python');
+    expect(el.querySelector('.cv-page__skill-line')).toBeNull();
+  });
+
+  it('groups skills by category, falling back to "Other" when uncategorized', () => {
+    setup({
+      profile: profile({
+        skills: [
+          { raw_text: 'Java', skill: { canonical_name: 'Java', category: 'Backend' }, evidence: null },
+          { raw_text: 'Docker', skill: { canonical_name: 'Docker', category: 'Backend' }, evidence: null },
+          { raw_text: 'Figma', skill: null, evidence: null },
+        ],
+      }),
+      groupSkillsByCategory: true,
+    });
+
+    const el = fixture.nativeElement as HTMLElement;
+    const groupLabels = [...el.querySelectorAll('.cv-skill-group__label')].map((n) => n.textContent?.trim());
+    expect(groupLabels).toEqual(['Backend', 'Other']);
+    expect(el.querySelectorAll('.cv-skill-chip').length).toBe(3);
   });
 
   it('renders a custom section with the exact user-authored title and content', () => {

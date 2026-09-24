@@ -126,3 +126,73 @@ class TestCvRenderPdf:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.content.startswith(b"%PDF")
+
+    def test_groups_skills_by_category_when_requested(self, api_client):
+        response = api_client.post(
+            reverse("cv-render-pdf"),
+            {
+                "profile": _profile(
+                    skills=[
+                        {"raw_text": "JUnit", "skill": {"canonical_name": "JUnit", "category": "Quality & Testing"}},
+                        {"raw_text": "SpringBoot", "skill": {"canonical_name": "SpringBoot", "category": "Backend"}},
+                        {"raw_text": "React", "skill": None},
+                    ],
+                ),
+                "template_id": "modern-split",
+                "section_order": _section_order(),
+                "hidden_section_ids": [],
+                "group_skills_by_category": True,
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.content.startswith(b"%PDF")
+
+    @pytest.mark.parametrize("template_id", ["ats-classic", "modern-split", "technical"])
+    def test_content_overflowing_one_page_spills_onto_a_new_page(self, api_client, template_id):
+        # A long, single-experience-repeated-many-times profile so this
+        # test doesn't depend on any one template's exact line-height -
+        # it just needs to overflow a single A4 page by a wide margin,
+        # for both single-column and 2-column (split) templates, since
+        # WeasyPrint's flex-based split layout is the riskier case for
+        # cross-page fragmentation.
+        long_profile = _profile(
+            experiences=[
+                {
+                    "title": f"Role {i}",
+                    "company": f"Company {i}",
+                    "start_date_raw": "2015",
+                    "end_date_raw": "2016",
+                    "description": "Did a lot of impactful engineering work across several major initiatives.",
+                    "achievements": [
+                        "Improved system reliability significantly across the board",
+                        "Led a cross-functional team through a major migration",
+                        "Reduced costs while improving developer experience",
+                    ],
+                    "technologies": ["Python", "Django", "PostgreSQL"],
+                }
+                for i in range(12)
+            ],
+        )
+
+        response = api_client.post(
+            reverse("cv-render-pdf"),
+            {
+                "profile": long_profile,
+                "template_id": template_id,
+                "section_order": _section_order(),
+                "hidden_section_ids": [],
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+
+        import pypdfium2
+
+        pdf = pypdfium2.PdfDocument(response.content)
+        try:
+            assert len(pdf) > 1, f"{template_id}: expected multiple pages for long content, got {len(pdf)}"
+        finally:
+            pdf.close()

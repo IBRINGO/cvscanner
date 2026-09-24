@@ -227,6 +227,30 @@
   background: var(--accent-strong);
 }
 
+.editor__export-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--ink-primary);
+  font: inherit;
+  font-weight: 600;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.editor__export-preview:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.editor__export-preview:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .editor__export-cancel {
   border: 1px solid var(--border-subtle);
   background: none;
@@ -303,6 +327,16 @@
   overflow-y: auto;
 }
 
+// The sections list now lives in a dropdown (absolutely positioned,
+// see .editor__sections-dropdown) instead of the panel's normal flow -
+// an overflow:auto ancestor would clip it regardless of z-index, and
+// this panel's own content is short enough now that it never needs to
+// scroll itself.
+.editor__sections {
+  overflow: visible;
+  max-height: none;
+}
+
 .editor__properties h2 {
   margin: 0;
 }
@@ -317,6 +351,27 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.editor__field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.editor__toggle-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink-primary);
+  cursor: pointer;
+}
+
+.editor__toggle-row input {
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .editor__label {
@@ -356,6 +411,73 @@
 .editor__hint {
   margin: 0 0 var(--space-1);
   font-size: var(--text-xs);
+}
+
+.editor__sections-menu {
+  position: relative;
+}
+
+.editor__sections-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.editor__sections-toggle:hover {
+  background: var(--surface-sunken);
+}
+
+.editor__sections-toggle[aria-expanded='true'] {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+
+.editor__sections-chevron {
+  margin-left: auto;
+  transition: transform var(--motion-base) var(--motion-ease);
+}
+
+.editor__sections-chevron[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+.editor__section-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  background: transparent;
+}
+
+.editor__sections-dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-overlay);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor__sections-toggle,
+  .editor__sections-chevron {
+    transition: none;
+  }
 }
 
 .editor__section-list {
@@ -596,6 +718,63 @@
 }
 
 .editor__chip-list button:hover {
+  color: var(--negative);
+}
+
+.editor__skill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editor__skill-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.editor__skill-name {
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor__skill-category {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--ink-primary);
+}
+
+.editor__skill-category:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.editor__skill-row button {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--ink-tertiary);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 2px;
+}
+
+.editor__skill-row button:hover {
   color: var(--negative);
 }
 
