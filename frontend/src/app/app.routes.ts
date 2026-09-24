@@ -27,13 +27,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'cvs/:id/editor',
-        loadComponent: () =>
-          import('./features/cvs/pages/cv-editor/cv-editor.component').then(
-            (m) => m.CvEditorComponent,
-          ),
-      },
-      {
         path: 'jobs',
         loadComponent: () =>
           import('./features/jobs/pages/job-list/job-list.component').then(
@@ -122,6 +115,15 @@ export const routes: Routes = [
           ),
       },
     ],
+  },
+  // Full-screen: no sidebar/header, so the document gets the whole
+  // viewport - the editor has its own back link and topbar instead.
+  {
+    path: 'cvs/:id/editor',
+    loadComponent: () =>
+      import('./features/cvs/pages/cv-editor/cv-editor.component').then(
+        (m) => m.CvEditorComponent,
+      ),
   },
   { path: '**', redirectTo: '' },
 ];

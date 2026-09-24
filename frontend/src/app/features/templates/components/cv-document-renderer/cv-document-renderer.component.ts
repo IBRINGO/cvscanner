@@ -9,6 +9,11 @@ import {
 import { formatEnumLabel } from '../../../../shared/utils/format-label';
 import { TemplateDefinition } from '../../models/template-definition.model';
 
+/** The masthead (name/contact) isn't a reorderable CvSectionRef - it's
+ * always present - so it gets its own sentinel id for interactive
+ * click-to-select, distinct from any real section id. */
+export const PERSONAL_INFO_ID = 'personal-info';
+
 /**
  * The one data-driven CV renderer behind every template (section: "Do
  * not duplicate the CV data for every template"). The same
@@ -25,7 +30,12 @@ import { TemplateDefinition } from '../../models/template-definition.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article class="cv-page" [attr.data-template]="template.id" [attr.data-columns]="template.columns">
-      <header class="cv-page__header">
+      <header
+        class="cv-page__header cv-section-slot"
+        [attr.data-interactive]="interactive"
+        [attr.data-selected]="interactive && selectedSectionId === PERSONAL_INFO_ID"
+        (click)="onSectionClick(PERSONAL_INFO_ID)"
+      >
         <h1 class="cv-page__name">{{ profile.full_name ?? 'Unnamed candidate' }}</h1>
         @if (contactLine()) {
           <p class="cv-page__contact">{{ contactLine() }}</p>
@@ -202,6 +212,8 @@ import { TemplateDefinition } from '../../models/template-definition.model';
   styleUrl: './cv-document-renderer.component.scss',
 })
 export class CvDocumentRendererComponent {
+  protected readonly PERSONAL_INFO_ID = PERSONAL_INFO_ID;
+
   @Input({ required: true }) profile!: CandidateProfile;
   @Input({ required: true }) sectionOrder!: CvSectionRef[];
   @Input() hiddenSectionIds: string[] = [];
@@ -238,7 +250,7 @@ export class CvDocumentRendererComponent {
   }
 
   contactLine(): string {
-    const items = [this.profile.email, this.profile.phone, this.profile.location].filter(
+    const items = [this.profile.email, this.profile.phone, this.profile.location, ...this.profile.links].filter(
       (item): item is string => !!item,
     );
     return items.join('  |  ');

@@ -2,7 +2,15 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiClientService } from '../../../core/http/api-client.service';
 import { DocumentStatusResponse, DocumentSummary } from '../../../shared/models/document.model';
-import { CvProfileResponse } from '../models/candidate-profile.model';
+import { CandidateProfile, CvProfileResponse } from '../models/candidate-profile.model';
+import { CvSectionRef } from '../models/cv-document.model';
+
+export interface RenderPdfRequest {
+  profile: CandidateProfile;
+  template_id: string;
+  section_order: CvSectionRef[];
+  hidden_section_ids: string[];
+}
 
 /**
  * All CV-related HTTP calls go through this service - components never
@@ -28,5 +36,13 @@ export class CvApiService {
 
   getProfile(documentId: string): Observable<CvProfileResponse> {
     return this.api.get<CvProfileResponse>(`cvs/${documentId}/profile/`);
+  }
+
+  /** Server-rendered A4 PDF for the editor's live (possibly edited,
+   * unsaved) profile - a direct file download, not the browser's print
+   * dialog. Rendering happens server-side so the PDF keeps real,
+   * selectable text (ATS-friendly), unlike a client-side screenshot. */
+  renderPdf(payload: RenderPdfRequest): Observable<Blob> {
+    return this.api.postForBlob('cvs/render-pdf/', payload);
   }
 }

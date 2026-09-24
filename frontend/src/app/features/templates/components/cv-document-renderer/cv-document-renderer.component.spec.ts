@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CandidateProfile } from '../../../cvs/models/candidate-profile.model';
 import { DEFAULT_SECTION_ORDER } from '../../../cvs/models/cv-document.model';
 import { findTemplate } from '../../models/template-definition.model';
-import { CvDocumentRendererComponent } from './cv-document-renderer.component';
+import { CvDocumentRendererComponent, PERSONAL_INFO_ID } from './cv-document-renderer.component';
 
 function profile(overrides: Partial<CandidateProfile> = {}): CandidateProfile {
   return {
@@ -109,7 +109,7 @@ describe('CvDocumentRendererComponent', () => {
     const emitted: string[] = [];
     fixture.componentInstance.sectionSelected.subscribe((id) => emitted.push(id));
 
-    const slot = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.cv-section-slot')!;
+    const slot = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.cv-page__body .cv-section-slot')!;
     slot.click();
     expect(emitted).toEqual(['summary']);
   });
@@ -123,7 +123,20 @@ describe('CvDocumentRendererComponent', () => {
     fixture.componentRef.setInput('selectedSectionId', 'summary');
     fixture.detectChanges();
 
-    const slot = (fixture.nativeElement as HTMLElement).querySelector('.cv-section-slot');
+    const slot = (fixture.nativeElement as HTMLElement).querySelector('.cv-page__body .cv-section-slot');
     expect(slot?.getAttribute('data-selected')).toBe('true');
+  });
+
+  it('emits the personal-info sentinel id when the masthead is clicked and interactive', () => {
+    setup();
+    fixture.componentRef.setInput('interactive', true);
+    fixture.detectChanges();
+
+    const emitted: string[] = [];
+    fixture.componentInstance.sectionSelected.subscribe((id) => emitted.push(id));
+
+    const header = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.cv-page__header')!;
+    header.click();
+    expect(emitted).toEqual([PERSONAL_INFO_ID]);
   });
 });

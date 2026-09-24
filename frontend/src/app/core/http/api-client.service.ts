@@ -35,6 +35,12 @@ export class ApiClientService {
     return this.http.post<T>(this.url(path), body);
   }
 
+  /** For endpoints that return a binary file (e.g. a rendered PDF)
+   * instead of JSON - callers turn the Blob into a download link. */
+  postForBlob(path: string, body: unknown): Observable<Blob> {
+    return this.http.post(this.url(path), body, { responseType: 'blob' });
+  }
+
   put<T>(path: string, body: unknown): Observable<T> {
     return this.http.put<T>(this.url(path), body);
   }

@@ -73,6 +73,7 @@ describe('CvEditorComponent', () => {
   function setup(options: { queryParams?: Record<string, string>; cvProfile?: CandidateProfile } = {}): void {
     cvApiSpy = jasmine.createSpyObj('CvApiService', {
       getProfile: of({ document_id: 'cv-1', status: 'PROCESSED', profile: options.cvProfile ?? profile() }),
+      renderPdf: of(new Blob(['%PDF-1.4'], { type: 'application/pdf' })),
     });
     tailoringApiSpy = jasmine.createSpyObj('TailoringApiService', {
       getPlan: of(tailoringPlan()),
@@ -173,13 +174,26 @@ describe('CvEditorComponent', () => {
     expect(text).toContain('ATS Classic');
   });
 
-  it('marks the body for print-only rendering and calls window.print when downloading', () => {
+  it('downloads a server-rendered PDF instead of using the browser print dialog', () => {
     setup();
-    spyOn(window, 'print');
+    component.openExport();
     component.downloadPdf();
-    expect(window.print).toHaveBeenCalled();
-    expect(document.body.classList.contains('cv-printing')).toBeTrue();
-    document.body.classList.remove('cv-printing');
+
+    expect(cvApiSpy.renderPdf).toHaveBeenCalledWith(
+      jasmine.objectContaining({ template_id: component.templateId() }),
+    );
+    expect(component.downloading()).toBeFalse();
+    expect(component.showExport()).toBeFalse();
+  });
+
+  it('surfaces an error and keeps the export panel open if the PDF render fails', () => {
+    setup();
+    cvApiSpy.renderPdf.and.returnValue(new Observable((subscriber) => subscriber.error(new Error('render failed'))));
+    component.openExport();
+    component.downloadPdf();
+
+    expect(component.downloadError()).toContain('Could not generate the PDF');
+    expect(component.showExport()).toBeTrue();
   });
 
   it('closes the export panel without leaving print mode on', () => {
@@ -229,6 +243,77 @@ describe('CvEditorComponent', () => {
 
     component.removeEducation(1);
     expect(component.profile()?.education.length).toBe(1);
+  });
+
+  it('reorders experience entries by relevance without losing or duplicating any of them', () => {
+    setup({
+      cvProfile: profile({
+        experiences: [
+          { title: 'Role A', company: null, start_date_raw: null, end_date_raw: null, description: '', achievements: [], technologies: [], seniority: null, evidence: null },
+          { title: 'Role B', company: null, start_date_raw: null, end_date_raw: null, description: '', achievements: [], technologies: [], seniority: null, evidence: null },
+          { title: 'Role C', company: null, start_date_raw: null, end_date_raw: null, description: '', achievements: [], technologies: [], seniority: null, evidence: null },
+        ],
+      }),
+    });
+
+    component.onExperienceDrop({ previousIndex: 2, currentIndex: 0 } as CdkDragDrop<CandidateProfile['experiences']>);
+
+    expect(component.profile()?.experiences.map((e) => e.title)).toEqual(['Role C', 'Role A', 'Role B']);
+  });
+
+  it('does nothing when an experience drag ends back at the same position', () => {
+    setup();
+    const before = component.profile()?.experiences.map((e) => e.title);
+    component.onExperienceDrop({ previousIndex: 0, currentIndex: 0 } as CdkDragDrop<CandidateProfile['experiences']>);
+    expect(component.profile()?.experiences.map((e) => e.title)).toEqual(before);
+    expect(component.canUndo()).toBeFalse();
+  });
+
+  it('reorders project entries by relevance without losing or duplicating any of them', () => {
+    setup({
+      cvProfile: profile({
+        projects: [
+          { name: 'Project A', description: '', technologies: [] },
+          { name: 'Project B', description: '', technologies: [] },
+        ],
+      }),
+    });
+
+    component.onProjectDrop({ previousIndex: 0, currentIndex: 1 } as CdkDragDrop<CandidateProfile['projects']>);
+
+    expect(component.profile()?.projects.map((p) => p.name)).toEqual(['Project B', 'Project A']);
+  });
+
+  it('edits personal info (name, email, phone, location) and reflects it live', () => {
+    setup();
+    component.updatePersonalInfo('full_name', 'Alex Rivera');
+    component.updatePersonalInfo('email', 'alex@example.com');
+    component.updatePersonalInfo('phone', '555-0100');
+    component.updatePersonalInfo('location', 'Austin, TX');
+    fixture.detectChanges();
+
+    expect(component.profile()).toEqual(
+      jasmine.objectContaining({
+        full_name: 'Alex Rivera',
+        email: 'alex@example.com',
+        phone: '555-0100',
+        location: 'Austin, TX',
+      }),
+    );
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Alex Rivera');
+  });
+
+  it('adds and removes a personal link', () => {
+    setup();
+    component.addLink('linkedin.com/in/jordan');
+    expect(component.profile()?.links).toEqual(['linkedin.com/in/jordan']);
+
+    component.addLink('   ');
+    expect(component.profile()?.links.length).toBe(1);
+
+    component.removeLink(0);
+    expect(component.profile()?.links).toEqual([]);
   });
 
   it('adds, edits, duplicates and removes a project entry', () => {
