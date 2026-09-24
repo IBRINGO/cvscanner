@@ -45,7 +45,21 @@ describe('TailoringHubComponent', () => {
   it('lists past tailoring runs with their status', () => {
     setup([plan({ status: 'COMPLETED' })]);
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('COMPLETED');
+    expect(text).toContain('Completed');
+  });
+
+  it('shows the before/after match score for a completed run', () => {
+    setup([plan({ status: 'COMPLETED', before_score: 0.72, after_score: 0.81 })]);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('72%');
+    expect(text).toContain('81%');
+  });
+
+  it('does not show a score for a run that has not completed', () => {
+    setup([plan({ status: 'GENERATING', before_score: null, after_score: null })]);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Generating');
+    expect(text).not.toContain('%');
   });
 
   it('links each row to that plan detail page', () => {

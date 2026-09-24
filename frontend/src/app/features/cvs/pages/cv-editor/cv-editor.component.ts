@@ -83,16 +83,10 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
               </div>
             </dl>
             <div class="editor__export-actions">
-              <div class="editor__export-row">
-                <button type="button" class="editor__export-preview" (click)="openPreview()">
-                  <ng-icon name="lucideEye" size="16" />
-                  Preview
-                </button>
-                <button type="button" class="editor__export-download" [disabled]="downloading()" (click)="downloadPdf()">
-                  <ng-icon name="lucideDownload" size="16" />
-                  {{ downloading() ? 'Preparing...' : 'Download PDF' }}
-                </button>
-              </div>
+              <button type="button" class="editor__export-download" [disabled]="downloading()" (click)="downloadPdf()">
+                <ng-icon name="lucideDownload" size="16" />
+                {{ downloading() ? 'Preparing your PDF...' : 'Download PDF' }}
+              </button>
               <button type="button" class="editor__export-cancel" (click)="closeExport()">Continue editing</button>
             </div>
             @if (downloadError()) {
@@ -229,6 +223,15 @@ const THUMB_SCALE = THUMB_WIDTH / THUMB_REFERENCE_WIDTH;
                   </button>
                 </div>
               }
+            </div>
+
+            <div class="editor__export-group">
+              <button type="button" class="editor__rail-btn" title="Preview" (click)="openPreview()">
+                <ng-icon name="lucideEye" size="18" />
+              </button>
+              <button type="button" class="editor__rail-btn" title="Download PDF" (click)="openExport()">
+                <ng-icon name="lucideDownload" size="18" />
+              </button>
             </div>
 
             <div class="editor__history">
@@ -977,7 +980,8 @@ export class CvEditorComponent implements OnInit {
    * triggers any download/print flow. It is the same live-styled
    * renderer used in the main editing pane, just shown full-size in a
    * modal so the candidate can review it before committing to a
-   * download. */
+   * download. Triggered directly from the sections/undo/redo rail, so
+   * it is independent of the export dialog - not nested inside it. */
   openPreview(): void {
     if (!this.profile()) return;
     this.showExport.set(false);
@@ -986,7 +990,6 @@ export class CvEditorComponent implements OnInit {
 
   closePreview(): void {
     this.showPreview.set(false);
-    this.showExport.set(true);
   }
 
   downloadPdf(): void {

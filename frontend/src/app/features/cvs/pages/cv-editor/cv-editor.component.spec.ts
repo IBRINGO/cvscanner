@@ -203,10 +203,9 @@ describe('CvEditorComponent', () => {
     expect(component.showExport()).toBeFalse();
   });
 
-  it('opens a client-side preview without calling the backend or opening a browser tab', () => {
+  it('opens a client-side preview (from the rail, independent of the export dialog) without calling the backend or opening a browser tab', () => {
     setup();
     const openSpy = spyOn(window, 'open');
-    component.openExport();
     component.openPreview();
 
     expect(component.showPreview()).toBeTrue();
@@ -216,7 +215,7 @@ describe('CvEditorComponent', () => {
 
     component.closePreview();
     expect(component.showPreview()).toBeFalse();
-    expect(component.showExport()).toBeTrue();
+    expect(component.showExport()).toBeFalse();
   });
 
   it('adds a custom section and can remove it again', () => {
